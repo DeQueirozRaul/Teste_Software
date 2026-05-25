@@ -14,11 +14,26 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS notas 
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, valor REAL, 
                        estabelecimento TEXT, categoria TEXT, tipo TEXT, descricao TEXT, arquivo_xml TEXT)''')
+
+    colunas_usuarios = {
+        row[1] for row in cursor.execute("PRAGMA table_info(usuarios)").fetchall()
+    }
+    if "nivel" not in colunas_usuarios:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN nivel TEXT")
+
+    colunas_notas = {
+        row[1] for row in cursor.execute("PRAGMA table_info(notas)").fetchall()
+    }
+    if "descricao" not in colunas_notas:
+        cursor.execute("ALTER TABLE notas ADD COLUMN descricao TEXT")
     
     # Criando os 3 Níveis de Acesso
     cursor.execute("INSERT OR IGNORE INTO usuarios (username, password, nivel) VALUES ('admin', 'admin', 'Administrador')")
     cursor.execute("INSERT OR IGNORE INTO usuarios (username, password, nivel) VALUES ('gerente', '123', 'Gerente')")
     cursor.execute("INSERT OR IGNORE INTO usuarios (username, password, nivel) VALUES ('caixa', '123', 'Operador')")
+    cursor.execute("UPDATE usuarios SET nivel = 'Administrador' WHERE username = 'admin' AND (nivel IS NULL OR nivel = '')")
+    cursor.execute("UPDATE usuarios SET nivel = 'Gerente' WHERE username = 'gerente' AND (nivel IS NULL OR nivel = '')")
+    cursor.execute("UPDATE usuarios SET nivel = 'Operador' WHERE username = 'caixa' AND (nivel IS NULL OR nivel = '')")
     
     cursor.execute("SELECT COUNT(*) FROM notas")
     if cursor.fetchone()[0] == 0:

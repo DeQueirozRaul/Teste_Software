@@ -1,0 +1,6 @@
+customtkinter
+flask
+pandas
+openpyxl
+pytest
+pytest-html
