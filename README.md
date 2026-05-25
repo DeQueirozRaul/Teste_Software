@@ -14,7 +14,7 @@ Este projeto é a materialização do Documento de Visão de um sistema desktop 
 * **Python 3**: linguagem principal do projeto.
 * **Tkinter**: base nativa da interface desktop.
 * **CustomTkinter**: componentes visuais modernos para o aplicativo desktop.
-* **Flask**: API HTTP usada para testes, integração e validação via Postman.
+* **Flask**: API HTTP usada para testes, integração e validação.
 * **SQLite3**: banco de dados local usado para usuários e notas fiscais.
 * **Pandas**: tratamento de dados para exportação de relatórios.
 * **OpenPyXL**: geração de arquivos Excel `.xlsx`.
