@@ -39,7 +39,6 @@ A API sobe localmente quando o sistema é iniciado pelo `app.py`:
 
 `http://127.0.0.1:5000`
 
-A interface desktop não acessa mais o SQLite diretamente para login, cadastro, listagem, edição, exclusão e relatórios. Essas operações passam pelos endpoints HTTP abaixo.
 
 Endpoints disponíveis:
 * `GET /api/health`: verifica se a API está online.
