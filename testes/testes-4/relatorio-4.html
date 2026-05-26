@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title id="head-title">pytest_relatorio.html</title>
+      <style type="text/css">body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  vertical-align: top;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+#environment ul {
+  margin: 0;
+  padding: 0 20px;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+.col-links__extra {
+  margin-right: 3px;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.logwrapper {
+  max-height: 230px;
+  overflow-y: scroll;
+  background-color: #e6e6e6;
+}
+.logwrapper.expanded {
+  max-height: none;
+}
+.logwrapper.expanded .logexpander:after {
+  content: "collapse [-]";
+}
+.logwrapper .logexpander {
+  z-index: 1;
+  position: sticky;
+  top: 10px;
+  width: max-content;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 5px 7px;
+  margin: 10px 0 10px calc(100% - 80px);
+  cursor: pointer;
+  background-color: #e6e6e6;
+}
+.logwrapper .logexpander:after {
+  content: "expand [+]";
+}
+.logwrapper .logexpander:hover {
+  color: #000;
+  border-color: #000;
+}
+.logwrapper .log {
+  min-height: 40px;
+  position: relative;
+  top: -50px;
+  height: calc(100% + 50px);
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  padding: 5px;
+  padding-right: 80px;
+  white-space: pre-wrap;
+}
+
+div.media {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin: 0 5px;
+  overflow: hidden;
+  width: 320px;
+}
+
+.media-container {
+  display: grid;
+  grid-template-columns: 25px auto 25px;
+  align-items: center;
+  flex: 1 1;
+  overflow: hidden;
+  height: 200px;
+}
+
+.media-container--fullscreen {
+  grid-template-columns: 0px auto 0px;
+}
+
+.media-container__nav--right,
+.media-container__nav--left {
+  text-align: center;
+  cursor: pointer;
+}
+
+.media-container__viewport {
+  cursor: pointer;
+  text-align: center;
+  height: inherit;
+}
+.media-container__viewport img,
+.media-container__viewport video {
+  object-fit: cover;
+  width: 100%;
+  max-height: 100%;
+}
+
+.media__name,
+.media__counter {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  flex: 0 0 25px;
+  align-items: center;
+}
+
+.collapsible td:not(.col-links) {
+  cursor: pointer;
+}
+.collapsible td:not(.col-links):hover::after {
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.col-result {
+  width: 130px;
+}
+.col-result:hover::after {
+  content: " (hide details)";
+}
+
+.col-result.collapsed:hover::after {
+  content: " (show details)";
+}
+
+#environment-header h2:hover::after {
+  content: " (hide details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#environment-header.collapsed h2:hover::after {
+  content: " (show details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+.sortable.desc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: -12.5px;
+  border: 10px solid #4caf50;
+  border-bottom: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+.sortable.asc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: 12.5px;
+  border: 10px solid #4caf50;
+  border-top: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.hidden, .summary__reload__button.hidden {
+  display: none;
+}
+
+.summary__data {
+  flex: 0 0 550px;
+}
+.summary__reload {
+  flex: 1 1;
+  display: flex;
+  justify-content: center;
+}
+.summary__reload__button {
+  flex: 0 0 300px;
+  display: flex;
+  color: white;
+  font-weight: bold;
+  background-color: #4caf50;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.summary__reload__button:hover {
+  background-color: #46a049;
+}
+.summary__spacer {
+  flex: 0 0 550px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filters,
+.collapse {
+  display: flex;
+  align-items: center;
+}
+.filters button,
+.collapse button {
+  color: #999;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.filters button:hover,
+.collapse button:hover {
+  color: #ccc;
+}
+
+.filter__label {
+  margin-right: 10px;
+}
+
+      </style>
+    
+  </head>
+  <body>
+    <h1 id="title">pytest_relatorio.html</h1>
+    <p>Report generated on 26-May-2026 at 16:01:47 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a>
+        v4.2.0</p>
+    <div id="environment-header">
+      <h2>Environment</h2>
+    </div>
+    <table id="environment"></table>
+    <!-- TEMPLATES -->
+      <template id="template_environment_row">
+      <tr>
+        <td></td>
+        <td></td>
+      </tr>
+    </template>
+    <template id="template_results-table__body--empty">
+      <tbody class="results-table-row">
+        <tr id="not-found-message">
+          <td colspan="4">No results found. Check the filters.</td>
+        </tr>
+      </tbody>
+    </template>
+    <template id="template_results-table__tbody">
+      <tbody class="results-table-row">
+        <tr class="collapsible">
+        </tr>
+        <tr class="extras-row">
+          <td class="extra" colspan="4">
+            <div class="extraHTML"></div>
+            <div class="media">
+              <div class="media-container">
+                  <div class="media-container__nav--left">&lt;</div>
+                  <div class="media-container__viewport">
+                    <img src="" />
+                    <video controls>
+                      <source src="" type="video/mp4">
+                    </video>
+                  </div>
+                  <div class="media-container__nav--right">&gt;</div>
+                </div>
+                <div class="media__name"></div>
+                <div class="media__counter"></div>
+            </div>
+            <div class="logwrapper">
+              <div class="logexpander"></div>
+              <div class="log"></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </template>
+    <!-- END TEMPLATES -->
+    <div class="summary">
+      <div class="summary__data">
+        <h2>Summary</h2>
+        <div class="additional-summary prefix">
+        </div>
+        <p class="run-count">34 tests took 00:00:16.</p>
+        <p class="filter">(Un)check the boxes to filter the results.</p>
+        <div class="summary__reload">
+          <div class="summary__reload__button hidden" onclick="location.reload()">
+            <div>There are still tests running. <br />Reload this page to get the latest results!</div>
+          </div>
+        </div>
+        <div class="summary__spacer"></div>
+        <div class="controls">
+          <div class="filters">
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="failed" >
+            <span class="failed">6 Failed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="passed" >
+            <span class="passed">28 Passed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="skipped" disabled>
+            <span class="skipped">0 Skipped,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xfailed" disabled>
+            <span class="xfailed">0 Expected failures,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xpassed" disabled>
+            <span class="xpassed">0 Unexpected passes,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="error" disabled>
+            <span class="error">0 Errors,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="rerun" disabled>
+            <span class="rerun">0 Reruns</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="retried" disabled>
+            <span class="retried">0 Retried,</span>
+          </div>
+          <div class="collapse">
+            <button id="show_all_details">Show all details</button>&nbsp;/&nbsp;<button id="hide_all_details">Hide all details</button>
+          </div>
+        </div>
+      </div>
+      <div class="additional-summary summary">
+      </div>
+      <div class="additional-summary postfix">
+      </div>
+    </div>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable" data-column-type="result">Result</th>
+          <th class="sortable" data-column-type="testId">Test</th>
+          <th class="sortable" data-column-type="duration">Duration</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+    </table>
+  <footer>
+    <div id="data-container" data-jsonblob="{&#34;environment&#34;: {&#34;Python&#34;: &#34;3.14.5&#34;, &#34;Platform&#34;: &#34;Linux-7.0.10-1-cachyos-x86_64-with-glibc2.43&#34;, &#34;Packages&#34;: {&#34;pytest&#34;: &#34;9.0.3&#34;, &#34;pluggy&#34;: &#34;1.6.0&#34;}, &#34;Plugins&#34;: {&#34;metadata&#34;: &#34;3.1.1&#34;, &#34;html&#34;: &#34;4.2.0&#34;}}, &#34;tests&#34;: {&#34;testes/testes-4/test_4_sistema.py::test_unit_conversao_bidirecional_de_datas&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_conversao_bidirecional_de_datas&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_conversao_bidirecional_de_datas&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-001\n[DESCRICAO] Validar convers\u00e3o de datas entre formato da interface e formato do banco.\n[PASSOS] Chamar data_para_db com data brasileira e data_para_ui com data ISO.\n[ENTRADA] data_para_db(&amp;quot;05/04/2026&amp;quot;); data_para_ui(&amp;quot;2026-04-05&amp;quot;)\n[SAIDA_ESPERADA] &amp;quot;2026-04-05&amp;quot; e &amp;quot;05/04/2026&amp;quot;\n[CRITERIO_SUCESSO] As duas convers\u00f5es retornam exatamente os formatos esperados.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-001 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_validacao_rejeita_datas_invalidas_e_futuras&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_validacao_rejeita_datas_invalidas_e_futuras&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_validacao_rejeita_datas_invalidas_e_futuras&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-002\n[DESCRICAO] Validar rejei\u00e7\u00e3o de datas inexistentes e datas futuras.\n[PASSOS] Enviar uma data imposs\u00edvel e uma data maior que a data atual.\n[ENTRADA] &amp;quot;31/02/2026&amp;quot;; amanh\u00e3 no formato DD/MM/YYYY\n[SAIDA_ESPERADA] False para as duas valida\u00e7\u00f5es\n[CRITERIO_SUCESSO] Datas inv\u00e1lidas ou futuras n\u00e3o s\u00e3o aceitas para emiss\u00e3o de nota.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-002 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_valor_positivo_aceita_virgula_e_ponto&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_valor_positivo_aceita_virgula_e_ponto&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_valor_positivo_aceita_virgula_e_ponto&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-003\n[DESCRICAO] Validar valores monet\u00e1rios positivos aceitos com ponto ou v\u00edrgula.\n[PASSOS] Chamar validar_valor_nota com valores positivos em formatos usuais.\n[ENTRADA] &amp;quot;199,90&amp;quot;; &amp;quot;199.90&amp;quot;\n[SAIDA_ESPERADA] True para os dois valores\n[CRITERIO_SUCESSO] O sistema aceita centavos com v\u00edrgula e ponto decimal.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-003 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_valor_invalido_rejeita_zero_negativo_e_texto&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_valor_invalido_rejeita_zero_negativo_e_texto&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_valor_invalido_rejeita_zero_negativo_e_texto&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-004\n[DESCRICAO] Validar bloqueio de valor zero, negativo e texto n\u00e3o num\u00e9rico.\n[PASSOS] Chamar validar_valor_nota com entradas financeiras inv\u00e1lidas.\n[ENTRADA] &amp;quot;0&amp;quot;; &amp;quot;-10&amp;quot;; &amp;quot;abc&amp;quot;\n[SAIDA_ESPERADA] False para todas as entradas\n[CRITERIO_SUCESSO] Nenhuma entrada sem valor financeiro positivo \u00e9 aceita.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-004 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_calcula_totais_com_centavos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_calcula_totais_com_centavos&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_calcula_totais_com_centavos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-005\n[DESCRICAO] Validar c\u00e1lculo financeiro com entradas e sa\u00eddas misturadas.\n[PASSOS] Enviar uma lista de registros para calcular_resumo_financeiro.\n[ENTRADA] Entradas: 100.00 e 50.55; Sa\u00eddas: 30.10 e 20.00\n[SAIDA_ESPERADA] entradas=150.55; saidas=50.10; saldo=100.45\n[CRITERIO_SUCESSO] Os totais preservam centavos e classificam Entrada/Sa\u00edda corretamente.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-005 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_normaliza_e_rejeita_payloads_invalidos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_normaliza_e_rejeita_payloads_invalidos&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_normaliza_e_rejeita_payloads_invalidos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-006\n[DESCRICAO] Validar regras de payload de nota antes da grava\u00e7\u00e3o.\n[PASSOS] Enviar payload completo, payload sem estabelecimento e payload com tipo inv\u00e1lido.\n[ENTRADA] {&amp;quot;data&amp;quot;:&amp;quot;10/04/2026&amp;quot;,&amp;quot;valor&amp;quot;:&amp;quot;10,50&amp;quot;,&amp;quot;estabelecimento&amp;quot;:&amp;quot;Cliente&amp;quot;,&amp;quot;tipo&amp;quot;:&amp;quot;Entrada&amp;quot;}\n[SAIDA_ESPERADA] Payload v\u00e1lido retorna data ISO e float; payloads inv\u00e1lidos retornam mensagem de erro.\n[CRITERIO_SUCESSO] A valida\u00e7\u00e3o central impede dados incompletos ou tipos fora do dom\u00ednio.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-006 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_nivel_admin_reconhece_origens_validas&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_nivel_admin_reconhece_origens_validas&#34;, &#34;duration&#34;: &#34;10 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_nivel_admin_reconhece_origens_validas&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;10 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-007\n[DESCRICAO] Validar autoriza\u00e7\u00e3o administrativa por header, query string e corpo JSON.\n[PASSOS] Abrir contextos Flask de requisi\u00e7\u00e3o com cada forma de envio do n\u00edvel.\n[ENTRADA] Header X-User-Level; query nivel; JSON {&amp;quot;nivel&amp;quot;:&amp;quot;Administrador&amp;quot;}\n[SAIDA_ESPERADA] True quando Administrador; False para Gerente/Operador/ausente\n[CRITERIO_SUCESSO] A fun\u00e7\u00e3o reconhece administrador e n\u00e3o concede privil\u00e9gio a outros n\u00edveis.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-007 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_serializar_nota_converte_row_para_contrato_json&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_serializar_nota_converte_row_para_contrato_json&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_serializar_nota_converte_row_para_contrato_json&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-008\n[DESCRICAO] Validar serializa\u00e7\u00e3o de uma linha SQLite para JSON da API.\n[PASSOS] Construir uma linha sqlite3.Row e chamar serializar_nota.\n[ENTRADA] Registro com data 2026-04-10, valor 99.99 e tipo Entrada\n[SAIDA_ESPERADA] Dicion\u00e1rio com data 10/04/2026 e campos de nota preservados\n[CRITERIO_SUCESSO] A serializa\u00e7\u00e3o entrega o contrato JSON usado pelos endpoints.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-008 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_datas_extremas_bissexto_e_espacos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_datas_extremas_bissexto_e_espacos&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_datas_extremas_bissexto_e_espacos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;@pytest.mark.case(\n        id=&amp;quot;R4-UNIT-009&amp;quot;,\n        description=&amp;quot;Validar datas extremas: ano bissexto v\u00e1lido, ano n\u00e3o bissexto inv\u00e1lido e espa\u00e7os ao redor.&amp;quot;,\n        steps=&amp;quot;Chamar data_para_db e validar_data_emissao com datas bissextas e texto com espa\u00e7os.&amp;quot;,\n        input_data=&amp;#x27;&amp;quot;29/02/2024&amp;quot;; &amp;quot;29/02/2025&amp;quot;; &amp;quot; 10/04/2026 &amp;quot;&amp;#x27;,\n        expected_output=&amp;#x27;&amp;quot;2024-02-29&amp;quot;; False para 2025; True para data com espa\u00e7os&amp;#x27;,\n        success_criteria=&amp;quot;A valida\u00e7\u00e3o diferencia ano bissexto real e tolera espa\u00e7os acidentais.&amp;quot;,\n    )\n    def test_unit_datas_extremas_bissexto_e_espacos():\n        assert data_para_db(&amp;quot;29/02/2024&amp;quot;) == &amp;quot;2024-02-29&amp;quot;\n        assert validar_data_emissao(&amp;quot;29/02/2024&amp;quot;) is True\n        assert data_para_db(&amp;quot;29/02/2025&amp;quot;) is None\n        assert validar_data_emissao(&amp;quot;29/02/2025&amp;quot;) is False\n&amp;gt;       assert validar_data_emissao(&amp;quot; 10/04/2026 &amp;quot;) is True\nE       AssertionError: assert False is True\nE        +  where False = validar_data_emissao(&amp;#x27; 10/04/2026 &amp;#x27;)\n\ntestes/testes-4/test_4_sistema.py:194: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-009\n[DESCRICAO] Validar datas extremas: ano bissexto v\u00e1lido, ano n\u00e3o bissexto inv\u00e1lido e espa\u00e7os ao redor.\n[PASSOS] Chamar data_para_db e validar_data_emissao com datas bissextas e texto com espa\u00e7os.\n[ENTRADA] &amp;quot;29/02/2024&amp;quot;; &amp;quot;29/02/2025&amp;quot;; &amp;quot; 10/04/2026 &amp;quot;\n[SAIDA_ESPERADA] &amp;quot;2024-02-29&amp;quot;; False para 2025; True para data com espa\u00e7os\n[CRITERIO_SUCESSO] A valida\u00e7\u00e3o diferencia ano bissexto real e tolera espa\u00e7os acidentais.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-009 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_valores_extremos_rejeita_nan_infinito_e_formatos_ambiguos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_valores_extremos_rejeita_nan_infinito_e_formatos_ambiguos&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_valores_extremos_rejeita_nan_infinito_e_formatos_ambiguos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;@pytest.mark.case(\n        id=&amp;quot;R4-UNIT-010&amp;quot;,\n        description=&amp;quot;Validar rejei\u00e7\u00e3o de valores num\u00e9ricos especiais e formatos amb\u00edguos.&amp;quot;,\n        steps=&amp;quot;Chamar validar_valor_nota com NaN, infinito, string vazia, moeda formatada e separador duplicado.&amp;quot;,\n        input_data=&amp;#x27;&amp;quot;nan&amp;quot;; &amp;quot;inf&amp;quot;; &amp;quot;&amp;quot;; &amp;quot;R$ 10,00&amp;quot;; &amp;quot;1.234,56&amp;quot;&amp;#x27;,\n        expected_output=&amp;quot;False para todas as entradas&amp;quot;,\n        success_criteria=&amp;quot;O validador n\u00e3o aceita valores n\u00e3o finitos nem formatos monet\u00e1rios amb\u00edguos.&amp;quot;,\n    )\n    def test_unit_valores_extremos_rejeita_nan_infinito_e_formatos_ambiguos():\n        for valor in [&amp;quot;nan&amp;quot;, &amp;quot;NaN&amp;quot;, &amp;quot;inf&amp;quot;, &amp;quot;-inf&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;   &amp;quot;, &amp;quot;R$ 10,00&amp;quot;, &amp;quot;1.234,56&amp;quot;]:\n&amp;gt;           assert validar_valor_nota(valor) is False\nE           AssertionError: assert True is False\nE            +  where True = validar_valor_nota(&amp;#x27;nan&amp;#x27;)\n\ntestes/testes-4/test_4_sistema.py:207: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-010\n[DESCRICAO] Validar rejei\u00e7\u00e3o de valores num\u00e9ricos especiais e formatos amb\u00edguos.\n[PASSOS] Chamar validar_valor_nota com NaN, infinito, string vazia, moeda formatada e separador duplicado.\n[ENTRADA] &amp;quot;nan&amp;quot;; &amp;quot;inf&amp;quot;; &amp;quot;&amp;quot;; &amp;quot;R$ 10,00&amp;quot;; &amp;quot;1.234,56&amp;quot;\n[SAIDA_ESPERADA] False para todas as entradas\n[CRITERIO_SUCESSO] O validador n\u00e3o aceita valores n\u00e3o finitos nem formatos monet\u00e1rios amb\u00edguos.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-010 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_payloads_malformados_nao_estouram_excecao&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_payloads_malformados_nao_estouram_excecao&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_validar_dados_nota_payloads_malformados_nao_estouram_excecao&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;@pytest.mark.case(\n        id=&amp;quot;R4-UNIT-011&amp;quot;,\n        description=&amp;quot;Validar payloads extremos com campos ausentes, None e estabelecimento em branco.&amp;quot;,\n        steps=&amp;quot;Chamar validar_dados_nota com dicion\u00e1rios incompletos ou com espa\u00e7os em campos obrigat\u00f3rios.&amp;quot;,\n        input_data=&amp;quot;{}; estabelecimento=&amp;#x27;   &amp;#x27;; valor=None; data=None&amp;quot;,\n        expected_output=&amp;quot;Mensagens de erro controladas sem exce\u00e7\u00f5es Python&amp;quot;,\n        success_criteria=&amp;quot;A valida\u00e7\u00e3o falha de forma previs\u00edvel mesmo com payloads malformados.&amp;quot;,\n    )\n    def test_unit_validar_dados_nota_payloads_malformados_nao_estouram_excecao():\n        erro, _, _ = validar_dados_nota({})\n        assert erro == &amp;quot;Data inv\u00e1lida ou no futuro&amp;quot;\n    \n        erro, _, _ = validar_dados_nota(\n            {&amp;quot;data&amp;quot;: &amp;quot;10/04/2026&amp;quot;, &amp;quot;valor&amp;quot;: &amp;quot;15&amp;quot;, &amp;quot;estabelecimento&amp;quot;: &amp;quot;   &amp;quot;, &amp;quot;tipo&amp;quot;: &amp;quot;Entrada&amp;quot;}\n        )\n&amp;gt;       assert erro == &amp;quot;Preencha o estabelecimento&amp;quot;\nE       AssertionError: assert None == &amp;#x27;Preencha o estabelecimento&amp;#x27;\n\ntestes/testes-4/test_4_sistema.py:225: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-011\n[DESCRICAO] Validar payloads extremos com campos ausentes, None e estabelecimento em branco.\n[PASSOS] Chamar validar_dados_nota com dicion\u00e1rios incompletos ou com espa\u00e7os em campos obrigat\u00f3rios.\n[ENTRADA] {}; estabelecimento=&amp;#x27;   &amp;#x27;; valor=None; data=None\n[SAIDA_ESPERADA] Mensagens de erro controladas sem exce\u00e7\u00f5es Python\n[CRITERIO_SUCESSO] A valida\u00e7\u00e3o falha de forma previs\u00edvel mesmo com payloads malformados.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-011 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_volume_alto_saldo_negativo&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_volume_alto_saldo_negativo&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_unit_resumo_financeiro_volume_alto_saldo_negativo&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-UNIT-012\n[DESCRICAO] Validar c\u00e1lculo financeiro em volume alto e com saldo negativo.\n[PASSOS] Gerar 1000 entradas pequenas e 1000 sa\u00eddas maiores e calcular o resumo.\n[ENTRADA] 1000 entradas de 0.01; 1000 sa\u00eddas de 0.02\n[SAIDA_ESPERADA] entradas=10.00; saidas=20.00; saldo=-10.00\n[CRITERIO_SUCESSO] O resumo continua correto em volume alto e saldo negativo.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-UNIT-012 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_healthcheck_retorna_status_ok&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_healthcheck_retorna_status_ok&#34;, &#34;duration&#34;: &#34;9 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_healthcheck_retorna_status_ok&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;9 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-001\n[DESCRICAO] Validar disponibilidade do servi\u00e7o Flask.\n[PASSOS] Executar GET /api/health usando Flask test_client.\n[ENTRADA] GET /api/health\n[SAIDA_ESPERADA] HTTP 200 com {&amp;quot;status&amp;quot;:&amp;quot;ok&amp;quot;,&amp;quot;servico&amp;quot;:&amp;quot;Controle Fiscal TechStore&amp;quot;}\n[CRITERIO_SUCESSO] O endpoint responde 200 e identifica o servi\u00e7o correto.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-001 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_login_autentica_perfis_padrao&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_login_autentica_perfis_padrao&#34;, &#34;duration&#34;: &#34;11 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_login_autentica_perfis_padrao&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;11 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-002\n[DESCRICAO] Validar autentica\u00e7\u00e3o dos tr\u00eas perfis padr\u00e3o.\n[PASSOS] Executar POST /api/login para admin, gerente e caixa.\n[ENTRADA] admin/admin; gerente/123; caixa/123\n[SAIDA_ESPERADA] HTTP 200 com n\u00edveis Administrador, Gerente e Operador\n[CRITERIO_SUCESSO] Cada usu\u00e1rio retorna o n\u00edvel de acesso esperado.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-002 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_login_rejeita_senha_incorreta&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_login_rejeita_senha_incorreta&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_login_rejeita_senha_incorreta&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-003\n[DESCRICAO] Validar rejei\u00e7\u00e3o de credenciais incorretas.\n[PASSOS] Executar POST /api/login com senha inv\u00e1lida.\n[ENTRADA] {&amp;quot;username&amp;quot;:&amp;quot;admin&amp;quot;,&amp;quot;password&amp;quot;:&amp;quot;errada&amp;quot;}\n[SAIDA_ESPERADA] HTTP 401 com {&amp;quot;erro&amp;quot;:&amp;quot;Login inv\u00e1lido&amp;quot;}\n[CRITERIO_SUCESSO] Credenciais inv\u00e1lidas n\u00e3o geram sess\u00e3o nem dados de usu\u00e1rio.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-003 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_listar_notas_retorna_seed_ordenado&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_listar_notas_retorna_seed_ordenado&#34;, &#34;duration&#34;: &#34;10 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_listar_notas_retorna_seed_ordenado&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;10 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-004\n[DESCRICAO] Validar listagem inicial determin\u00edstica de notas.\n[PASSOS] Executar GET /api/notas no banco isolado da rodada 4.\n[ENTRADA] GET /api/notas\n[SAIDA_ESPERADA] Quatro notas ordenadas por data decrescente\n[CRITERIO_SUCESSO] A API retorna todos os registros seedados e o contrato JSON completo.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-004 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_filtros_por_texto_e_periodo&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_filtros_por_texto_e_periodo&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_filtros_por_texto_e_periodo&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-005\n[DESCRICAO] Validar filtros por texto e por intervalo de datas.\n[PASSOS] Executar GET /api/notas com busca e depois com inicio/fim.\n[ENTRADA] busca=&amp;quot;Venda B2B&amp;quot;; inicio=&amp;quot;11/04/2026&amp;quot;; fim=&amp;quot;12/04/2026&amp;quot;\n[SAIDA_ESPERADA] Filtro textual retorna Venda B2B; per\u00edodo retorna dias 11 e 12/04/2026\n[CRITERIO_SUCESSO] Os filtros restringem corretamente os registros retornados.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-005 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_criar_nota_valida_atualiza_resumo&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_criar_nota_valida_atualiza_resumo&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_criar_nota_valida_atualiza_resumo&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-006\n[DESCRICAO] Validar cria\u00e7\u00e3o de nota de entrada e impacto no resumo.\n[PASSOS] Executar POST /api/notas com payload v\u00e1lido e consultar /api/resumo.\n[ENTRADA] {&amp;quot;data&amp;quot;:&amp;quot;15/04/2026&amp;quot;,&amp;quot;valor&amp;quot;:&amp;quot;250,50&amp;quot;,&amp;quot;tipo&amp;quot;:&amp;quot;Entrada&amp;quot;}\n[SAIDA_ESPERADA] HTTP 201 com id; entradas aumentam para 1901.25 e saldo para 1421.00\n[CRITERIO_SUCESSO] A nota \u00e9 persistida com valor decimal correto e refletida no resumo financeiro.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-006 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_criar_nota_rejeita_payloads_invalidos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_criar_nota_rejeita_payloads_invalidos&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_criar_nota_rejeita_payloads_invalidos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-007\n[DESCRICAO] Validar rejei\u00e7\u00e3o de payloads inv\u00e1lidos no cadastro de nota.\n[PASSOS] Enviar notas com data futura, valor zero, estabelecimento vazio e tipo inv\u00e1lido.\n[ENTRADA] 4 payloads inv\u00e1lidos para POST /api/notas\n[SAIDA_ESPERADA] HTTP 400 com mensagem de erro espec\u00edfica para cada payload\n[CRITERIO_SUCESSO] Nenhum payload inv\u00e1lido \u00e9 aceito pelo endpoint de cadastro.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-007 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_editar_nota_exige_admin_e_persiste_alteracao&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_editar_nota_exige_admin_e_persiste_alteracao&#34;, &#34;duration&#34;: &#34;8 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_editar_nota_exige_admin_e_persiste_alteracao&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;8 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-008\n[DESCRICAO] Validar edi\u00e7\u00e3o de nota protegida por permiss\u00e3o administrativa.\n[PASSOS] Tentar PUT como Gerente e depois repetir como Administrador.\n[ENTRADA] PUT /api/notas/1 com X-User-Level Gerente e Administrador\n[SAIDA_ESPERADA] Gerente recebe 403; Administrador recebe 200 e nota atualizada\n[CRITERIO_SUCESSO] Apenas administrador consegue alterar opera\u00e7\u00f5es existentes.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-008 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_excluir_nota_exige_admin_e_remove_registro&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_excluir_nota_exige_admin_e_remove_registro&#34;, &#34;duration&#34;: &#34;8 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_excluir_nota_exige_admin_e_remove_registro&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;8 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-009\n[DESCRICAO] Validar exclus\u00e3o de nota protegida por permiss\u00e3o administrativa.\n[PASSOS] Tentar DELETE como Operador e depois repetir como Administrador.\n[ENTRADA] DELETE /api/notas/2 com nivel Operador e Administrador\n[SAIDA_ESPERADA] Operador recebe 403; Administrador recebe 200; nota deixa de aparecer\n[CRITERIO_SUCESSO] A exclus\u00e3o respeita permiss\u00e3o e remove o registro do banco.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-009 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_editar_e_excluir_id_inexistente_retorna_404&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_editar_e_excluir_id_inexistente_retorna_404&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_editar_e_excluir_id_inexistente_retorna_404&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-010\n[DESCRICAO] Validar tratamento de recurso inexistente em edi\u00e7\u00e3o e exclus\u00e3o.\n[PASSOS] Executar PUT e DELETE para nota id 999 como Administrador.\n[ENTRADA] PUT /api/notas/999; DELETE /api/notas/999\n[SAIDA_ESPERADA] HTTP 404 com {&amp;quot;erro&amp;quot;:&amp;quot;Opera\u00e7\u00e3o n\u00e3o encontrada&amp;quot;}\n[CRITERIO_SUCESSO] Opera\u00e7\u00f5es sobre IDs inexistentes retornam erro controlado.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-010 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_busca_com_padrao_sql_injection_nao_vaza_todos_os_registros&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_busca_com_padrao_sql_injection_nao_vaza_todos_os_registros&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_busca_com_padrao_sql_injection_nao_vaza_todos_os_registros&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-011\n[DESCRICAO] Validar busca com texto agressivo semelhante a SQL injection.\n[PASSOS] Executar GET /api/notas com termo contendo aspas, operador OR e comentario SQL.\n[ENTRADA] busca=&amp;quot;&amp;#x27; OR 1=1 --&amp;quot;\n[SAIDA_ESPERADA] HTTP 200 com lista vazia e banco ainda \u00edntegro\n[CRITERIO_SUCESSO] O endpoint usa par\u00e2metros SQL e n\u00e3o transforma o termo em comando execut\u00e1vel.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-011 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_cria_nota_unicode_simbolos_e_valor_muito_alto&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_cria_nota_unicode_simbolos_e_valor_muito_alto&#34;, &#34;duration&#34;: &#34;9 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_cria_nota_unicode_simbolos_e_valor_muito_alto&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;9 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-012\n[DESCRICAO] Validar cadastro com unicode, s\u00edmbolos e valor muito alto.\n[PASSOS] Executar POST /api/notas com acentos, emoji, XML com caminho simb\u00f3lico e valor milion\u00e1rio.\n[ENTRADA] estabelecimento=&amp;quot;S\u00e3o Jos\u00e9 &amp;amp; Filhos - Caf\u00e9&amp;quot;; valor=&amp;quot;999999999,99&amp;quot;\n[SAIDA_ESPERADA] HTTP 201; listagem preserva unicode; resumo incorpora valor 999999999.99\n[CRITERIO_SUCESSO] A API persiste caracteres n\u00e3o ASCII e calcula total alto sem truncar centavos.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-012 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_cadastro_sem_json_ou_json_vazio_retorna_400_controlado&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_cadastro_sem_json_ou_json_vazio_retorna_400_controlado&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_cadastro_sem_json_ou_json_vazio_retorna_400_controlado&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-013\n[DESCRICAO] Validar requisi\u00e7\u00e3o sem JSON ou com JSON vazio.\n[PASSOS] Enviar POST /api/notas sem corpo JSON e depois com objeto vazio.\n[ENTRADA] body text/plain vazio; json={}\n[SAIDA_ESPERADA] HTTP 400 com erro &amp;quot;Data inv\u00e1lida ou no futuro&amp;quot;\n[CRITERIO_SUCESSO] O endpoint responde erro controlado e n\u00e3o lan\u00e7a exce\u00e7\u00e3o 500.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-013 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_rejeita_estabelecimento_apenas_com_espacos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_rejeita_estabelecimento_apenas_com_espacos&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_rejeita_estabelecimento_apenas_com_espacos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;client = &amp;lt;FlaskClient &amp;lt;Flask &amp;#x27;backend.api&amp;#x27;&amp;gt;&amp;gt;\n\n    @pytest.mark.case(\n        id=&amp;quot;R4-API-014&amp;quot;,\n        description=&amp;quot;Validar rejei\u00e7\u00e3o de estabelecimento composto apenas por espa\u00e7os.&amp;quot;,\n        steps=&amp;quot;Executar POST /api/notas com estabelecimento=&amp;#x27;   &amp;#x27;.&amp;quot;,\n        input_data=&amp;#x27;{&amp;quot;data&amp;quot;:&amp;quot;18/04/2026&amp;quot;,&amp;quot;valor&amp;quot;:&amp;quot;10&amp;quot;,&amp;quot;estabelecimento&amp;quot;:&amp;quot;   &amp;quot;,&amp;quot;tipo&amp;quot;:&amp;quot;Entrada&amp;quot;}&amp;#x27;,\n        expected_output=&amp;#x27;HTTP 400 com {&amp;quot;erro&amp;quot;:&amp;quot;Preencha o estabelecimento&amp;quot;}&amp;#x27;,\n        success_criteria=&amp;quot;Campos obrigat\u00f3rios com apenas espa\u00e7os n\u00e3o podem gerar registro financeiro.&amp;quot;,\n    )\n    def test_api_rejeita_estabelecimento_apenas_com_espacos(client):\n        response = client.post(\n            &amp;quot;/api/notas&amp;quot;,\n            json={&amp;quot;data&amp;quot;: &amp;quot;18/04/2026&amp;quot;, &amp;quot;valor&amp;quot;: &amp;quot;10&amp;quot;, &amp;quot;estabelecimento&amp;quot;: &amp;quot;   &amp;quot;, &amp;quot;tipo&amp;quot;: &amp;quot;Entrada&amp;quot;},\n        )\n&amp;gt;       assert response.status_code == 400\nE       assert 201 == 400\nE        +  where 201 = &amp;lt;WrapperTestResponse streamed [201 CREATED]&amp;gt;.status_code\n\ntestes/testes-4/test_4_sistema.py:577: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-014\n[DESCRICAO] Validar rejei\u00e7\u00e3o de estabelecimento composto apenas por espa\u00e7os.\n[PASSOS] Executar POST /api/notas com estabelecimento=&amp;#x27;   &amp;#x27;.\n[ENTRADA] {&amp;quot;data&amp;quot;:&amp;quot;18/04/2026&amp;quot;,&amp;quot;valor&amp;quot;:&amp;quot;10&amp;quot;,&amp;quot;estabelecimento&amp;quot;:&amp;quot;   &amp;quot;,&amp;quot;tipo&amp;quot;:&amp;quot;Entrada&amp;quot;}\n[SAIDA_ESPERADA] HTTP 400 com {&amp;quot;erro&amp;quot;:&amp;quot;Preencha o estabelecimento&amp;quot;}\n[CRITERIO_SUCESSO] Campos obrigat\u00f3rios com apenas espa\u00e7os n\u00e3o podem gerar registro financeiro.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-014 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_rejeita_nan_e_infinito_em_valor_financeiro&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_rejeita_nan_e_infinito_em_valor_financeiro&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_rejeita_nan_e_infinito_em_valor_financeiro&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;client = &amp;lt;FlaskClient &amp;lt;Flask &amp;#x27;backend.api&amp;#x27;&amp;gt;&amp;gt;\n\n    @pytest.mark.case(\n        id=&amp;quot;R4-API-015&amp;quot;,\n        description=&amp;quot;Validar rejei\u00e7\u00e3o de NaN e infinito em valor financeiro pela API.&amp;quot;,\n        steps=&amp;quot;Executar POST /api/notas com valor=&amp;#x27;nan&amp;#x27; e valor=&amp;#x27;inf&amp;#x27;.&amp;quot;,\n        input_data=&amp;#x27;valor=&amp;quot;nan&amp;quot;; valor=&amp;quot;inf&amp;quot;&amp;#x27;,\n        expected_output=&amp;#x27;HTTP 400 com {&amp;quot;erro&amp;quot;:&amp;quot;O valor deve ser positivo&amp;quot;}&amp;#x27;,\n        success_criteria=&amp;quot;Valores n\u00e3o finitos n\u00e3o podem ser persistidos nem entrar no resumo financeiro.&amp;quot;,\n    )\n    def test_api_rejeita_nan_e_infinito_em_valor_financeiro(client):\n        for valor in [&amp;quot;nan&amp;quot;, &amp;quot;inf&amp;quot;]:\n            response = client.post(\n                &amp;quot;/api/notas&amp;quot;,\n                json={\n                    &amp;quot;data&amp;quot;: &amp;quot;18/04/2026&amp;quot;,\n                    &amp;quot;valor&amp;quot;: valor,\n                    &amp;quot;estabelecimento&amp;quot;: &amp;quot;Cliente Valor Especial&amp;quot;,\n                    &amp;quot;categoria&amp;quot;: &amp;quot;Venda&amp;quot;,\n                    &amp;quot;tipo&amp;quot;: &amp;quot;Entrada&amp;quot;,\n                },\n            )\n&amp;gt;           assert response.status_code == 400\nE           assert 201 == 400\nE            +  where 201 = &amp;lt;WrapperTestResponse streamed [201 CREATED]&amp;gt;.status_code\n\ntestes/testes-4/test_4_sistema.py:601: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-015\n[DESCRICAO] Validar rejei\u00e7\u00e3o de NaN e infinito em valor financeiro pela API.\n[PASSOS] Executar POST /api/notas com valor=&amp;#x27;nan&amp;#x27; e valor=&amp;#x27;inf&amp;#x27;.\n[ENTRADA] valor=&amp;quot;nan&amp;quot;; valor=&amp;quot;inf&amp;quot;\n[SAIDA_ESPERADA] HTTP 400 com {&amp;quot;erro&amp;quot;:&amp;quot;O valor deve ser positivo&amp;quot;}\n[CRITERIO_SUCESSO] Valores n\u00e3o finitos n\u00e3o podem ser persistidos nem entrar no resumo financeiro.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-015 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_api_exclusao_repetida_retorna_404_na_segunda_tentativa&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_api_exclusao_repetida_retorna_404_na_segunda_tentativa&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_api_exclusao_repetida_retorna_404_na_segunda_tentativa&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-API-016\n[DESCRICAO] Validar exclus\u00e3o repetida da mesma nota.\n[PASSOS] Excluir uma nota como Administrador e repetir a mesma exclus\u00e3o.\n[ENTRADA] DELETE /api/notas/3 duas vezes\n[SAIDA_ESPERADA] Primeira chamada HTTP 200; segunda chamada HTTP 404\n[CRITERIO_SUCESSO] O endpoint \u00e9 consistente ap\u00f3s remover o registro e n\u00e3o finge excluir duas vezes.\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-API-016 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_login_cadastro_busca_e_resumo&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_login_cadastro_busca_e_resumo&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_login_cadastro_busca_e_resumo&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-001\n[DESCRICAO] Validar fluxo do usu\u00e1rio: login, cadastro, busca e consulta de resumo em navegador.\n[PASSOS] Abrir harness web da rodada 4, preencher credenciais, salvar uma entrada, buscar a nota e consultar resumo.\n[ENTRADA] admin/admin; nota Entrada de R$ 250,50 para Cliente Rodada 4\n[SAIDA_ESPERADA] Login exibe Administrador; cadastro retorna salvo:id; busca lista a nota; resumo inclui saldo atualizado.\n[CRITERIO_SUCESSO] O fluxo completo funciona via HTTP real usando Playwright com Chromium headless.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:31] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:32] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:33] &amp;quot;POST /api/login HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:33] &amp;quot;POST /api/notas HTTP/1.1&amp;quot; 201 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:33] &amp;quot;GET /api/notas?busca=Cliente%20Rodada%204 HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:33] &amp;quot;GET /api/resumo HTTP/1.1&amp;quot; 200 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-001 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_cadastro_invalido_mostra_erro&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_cadastro_invalido_mostra_erro&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_cadastro_invalido_mostra_erro&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-002\n[DESCRICAO] Validar mensagem de erro ao usu\u00e1rio ao tentar cadastrar nota inv\u00e1lida.\n[PASSOS] Abrir o harness, preencher uma nota com data futura e clicar em salvar.\n[ENTRADA] data de amanh\u00e3; valor 100; tipo Entrada\n[SAIDA_ESPERADA] Mensagem &amp;quot;Data inv\u00e1lida ou no futuro&amp;quot; exibida no output de cadastro\n[CRITERIO_SUCESSO] O navegador recebe e mostra a valida\u00e7\u00e3o da API sem gravar a nota.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:33] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:34] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:34] &amp;quot;POST /api/notas HTTP/1.1&amp;quot; 400 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:35] &amp;quot;GET /api/notas?busca=Cliente%20Futuro HTTP/1.1&amp;quot; 200 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-002 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_operacional_existente&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_operacional_existente&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_operacional_existente&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-003\n[DESCRICAO] Validar navega\u00e7\u00e3o de consulta sem cadastro novo, simulando busca operacional do usu\u00e1rio.\n[PASSOS] Abrir harness, buscar por fornecedor existente e conferir a linha retornada.\n[ENTRADA] busca=&amp;quot;Fornecedor Papel Sul&amp;quot;\n[SAIDA_ESPERADA] Uma linha contendo Compra de Estoque e valor 300.25\n[CRITERIO_SUCESSO] A consulta usada na tela retorna exatamente a opera\u00e7\u00e3o filtrada.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:35] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:36] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:36] &amp;quot;GET /api/notas?busca=Fornecedor%20Papel%20Sul HTTP/1.1&amp;quot; 200 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-003 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_unicode_e_valor_muito_alto&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_unicode_e_valor_muito_alto&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_unicode_e_valor_muito_alto&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-004\n[DESCRICAO] Validar fluxo extremo no navegador com unicode, valor alto e busca por acento.\n[PASSOS] Abrir harness, cadastrar uma nota com texto acentuado e valor alto, buscar por parte acentuada e consultar resumo.\n[ENTRADA] estabelecimento=&amp;quot;S\u00e3o Jos\u00e9 &amp;amp; Filhos - Caf\u00e9&amp;quot;; valor=&amp;quot;999999999,99&amp;quot;\n[SAIDA_ESPERADA] Cadastro salvo, busca retorna uma linha e resumo cont\u00e9m entrada acima de 1 bilh\u00e3o.\n[CRITERIO_SUCESSO] O fluxo E2E preserva unicode e calcula valor alto via navegador + Flask real.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:37] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:37] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:38] &amp;quot;POST /api/notas HTTP/1.1&amp;quot; 201 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:38] &amp;quot;GET /api/notas?busca=S\u00e3o%20Jos\u00e9 HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:38] &amp;quot;GET /api/resumo HTTP/1.1&amp;quot; 200 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-004 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_agressiva_nao_vaza_registros&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_agressiva_nao_vaza_registros&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_busca_agressiva_nao_vaza_registros&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-005\n[DESCRICAO] Validar busca agressiva no navegador sem vazar registros.\n[PASSOS] Abrir harness, preencher busca com texto parecido com SQL injection e conferir lista vazia.\n[ENTRADA] busca=&amp;quot;&amp;#x27; OR 1=1 --&amp;quot;\n[SAIDA_ESPERADA] Nenhuma linha renderizada na lista de notas.\n[CRITERIO_SUCESSO] O fluxo navegador/API n\u00e3o transforma texto de busca em comando SQL.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:39] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:39] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:40] &amp;quot;GET /api/notas?busca=&amp;#x27;%20OR%201%3D1%20-- HTTP/1.1&amp;quot; 200 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-005 executado pelo pytest\n&#34;}], &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_deveria_rejeitar_estabelecimento_apenas_espacos&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;testes/testes-4/test_4_sistema.py::test_e2e_playwright_deveria_rejeitar_estabelecimento_apenas_espacos&#34;, &#34;duration&#34;: &#34;00:00:07&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;testes/testes-4/test_4_sistema.py::test_e2e_playwright_deveria_rejeitar_estabelecimento_apenas_espacos&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:07&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;live_server = &amp;#x27;http://127.0.0.1:34221&amp;#x27;\n\n    @pytest.mark.case(\n        id=&amp;quot;R4-E2E-006&amp;quot;,\n        description=&amp;quot;Validar defeito conhecido no navegador: estabelecimento s\u00f3 com espa\u00e7os \u00e9 aceito indevidamente.&amp;quot;,\n        steps=&amp;quot;Abrir harness, cadastrar nota com estabelecimento contendo apenas espa\u00e7os e observar resposta.&amp;quot;,\n        input_data=&amp;#x27;estabelecimento=&amp;quot;   &amp;quot;; valor=&amp;quot;10&amp;quot;; data=&amp;quot;18/04/2026&amp;quot;&amp;#x27;,\n        expected_output=&amp;#x27;Mensagem &amp;quot;Preencha o estabelecimento&amp;quot; no output de cadastro&amp;#x27;,\n        success_criteria=&amp;quot;A UI/API deveria bloquear campo obrigat\u00f3rio visualmente vazio.&amp;quot;,\n    )\n    def test_e2e_playwright_deveria_rejeitar_estabelecimento_apenas_espacos(live_server):\n        with sync_playwright() as playwright:\n            browser = playwright.chromium.launch(headless=True)\n            page = browser.new_page()\n            try:\n                page.goto(live_server, wait_until=&amp;quot;networkidle&amp;quot;)\n                page.get_by_label(&amp;quot;Data&amp;quot;).fill(&amp;quot;18/04/2026&amp;quot;)\n                page.get_by_label(&amp;quot;Valor&amp;quot;).fill(&amp;quot;10&amp;quot;)\n                page.get_by_label(&amp;quot;Estabelecimento&amp;quot;).fill(&amp;quot;   &amp;quot;)\n                page.get_by_label(&amp;quot;Categoria&amp;quot;).fill(&amp;quot;Venda&amp;quot;)\n                page.get_by_label(&amp;quot;Tipo&amp;quot;).select_option(&amp;quot;Entrada&amp;quot;)\n                page.get_by_label(&amp;quot;Descri\u00e7\u00e3o&amp;quot;).fill(&amp;quot;Campo obrigatorio vazio&amp;quot;)\n                page.locator(&amp;quot;#salvar&amp;quot;).click()\n&amp;gt;               expect(page.locator(&amp;quot;#save-result&amp;quot;)).to_have_text(&amp;quot;Preencha o estabelecimento&amp;quot;)\nE               AssertionError: Locator expected to have text &amp;#x27;Preencha o estabelecimento&amp;#x27;\nE               Actual value: salvo:5 \nE               Call log:\nE                 - Expect &amp;quot;to_have_text&amp;quot; with timeout 5000ms\nE                 - waiting for locator(&amp;quot;#save-result&amp;quot;)\nE                   14 \u00d7 locator resolved to &amp;lt;output id=&amp;quot;save-result&amp;quot;&amp;gt;salvo:5&amp;lt;/output&amp;gt;\nE                      - unexpected value &amp;quot;salvo:5&amp;quot;\n\ntestes/testes-4/test_4_sistema.py:811: AssertionError\n\n---------------------------- Captured stdout setup -----------------------------\n\n[CASO] R4-E2E-006\n[DESCRICAO] Validar defeito conhecido no navegador: estabelecimento s\u00f3 com espa\u00e7os \u00e9 aceito indevidamente.\n[PASSOS] Abrir harness, cadastrar nota com estabelecimento contendo apenas espa\u00e7os e observar resposta.\n[ENTRADA] estabelecimento=&amp;quot;   &amp;quot;; valor=&amp;quot;10&amp;quot;; data=&amp;quot;18/04/2026&amp;quot;\n[SAIDA_ESPERADA] Mensagem &amp;quot;Preencha o estabelecimento&amp;quot; no output de cadastro\n[CRITERIO_SUCESSO] A UI/API deveria bloquear campo obrigat\u00f3rio visualmente vazio.\n\n------------------------------ Captured log setup ------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:40] &amp;quot;GET /api/health HTTP/1.1&amp;quot; 200 -\n\n------------------------------ Captured log call -------------------------------\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:41] &amp;quot;GET / HTTP/1.1&amp;quot; 200 -\nINFO     werkzeug:_internal.py:97 127.0.0.1 - - [26/May/2026 16:01:41] &amp;quot;POST /api/notas HTTP/1.1&amp;quot; 201 -\n\n--------------------------- Captured stdout teardown ---------------------------\n[FIM] R4-E2E-006 executado pelo pytest\n&#34;}]}, &#34;renderCollapsed&#34;: [&#34;passed&#34;], &#34;initialSort&#34;: &#34;result&#34;, &#34;title&#34;: &#34;pytest_relatorio.html&#34;}"></div>
+    <script>
+      (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+const { getCollapsedCategory, setCollapsedIds } = require('./storage.js')
+
+class DataManager {
+    setManager(data) {
+        const collapsedCategories = [...getCollapsedCategory(data.renderCollapsed)]
+        const collapsedIds = []
+        const tests = Object.values(data.tests).flat().map((test, index) => {
+            const collapsed = collapsedCategories.includes(test.result.toLowerCase())
+            const id = `test_${index}`
+            if (collapsed) {
+                collapsedIds.push(id)
+            }
+            return {
+                ...test,
+                id,
+                collapsed,
+            }
+        })
+        const dataBlob = { ...data, tests }
+        this.data = { ...dataBlob }
+        this.renderData = { ...dataBlob }
+        setCollapsedIds(collapsedIds)
+    }
+
+    get allData() {
+        return { ...this.data }
+    }
+
+    resetRender() {
+        this.renderData = { ...this.data }
+    }
+
+    setRender(data) {
+        this.renderData.tests = [...data]
+    }
+
+    toggleCollapsedItem(id) {
+        this.renderData.tests = this.renderData.tests.map((test) =>
+            test.id === id ? { ...test, collapsed: !test.collapsed } : test,
+        )
+    }
+
+    set allCollapsed(collapsed) {
+        this.renderData = { ...this.renderData, tests: [...this.renderData.tests.map((test) => (
+            { ...test, collapsed }
+        ))] }
+    }
+
+    get testSubset() {
+        return [...this.renderData.tests]
+    }
+
+    get environment() {
+        return this.renderData.environment
+    }
+
+    get initialSort() {
+        return this.data.initialSort
+    }
+}
+
+module.exports = {
+    manager: new DataManager(),
+}
+
+},{"./storage.js":8}],2:[function(require,module,exports){
+const mediaViewer = require('./mediaviewer.js')
+const templateEnvRow = document.getElementById('template_environment_row')
+const templateResult = document.getElementById('template_results-table__tbody')
+
+function htmlToElements(html) {
+    const temp = document.createElement('template')
+    temp.innerHTML = html
+    return temp.content.childNodes
+}
+
+const find = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return elem.querySelector(selector)
+}
+
+const findAll = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return [...elem.querySelectorAll(selector)]
+}
+
+const dom = {
+    getStaticRow: (key, value) => {
+        const envRow = templateEnvRow.content.cloneNode(true)
+        const isObj = typeof value === 'object' && value !== null
+        const values = isObj ? Object.keys(value).map((k) => `${k}: ${value[k]}`) : null
+
+        const valuesElement = htmlToElements(
+            values ? `<ul>${values.map((val) => `<li>${val}</li>`).join('')}<ul>` : `<div>${value}</div>`)[0]
+        const td = findAll('td', envRow)
+        td[0].textContent = key
+        td[1].appendChild(valuesElement)
+
+        return envRow
+    },
+    getResultTBody: ({ testId, id, log, extras, resultsTableRow, tableHtml, result, collapsed }) => {
+        const resultBody = templateResult.content.cloneNode(true)
+        resultBody.querySelector('tbody').classList.add(result.toLowerCase())
+        resultBody.querySelector('tbody').id = testId
+        resultBody.querySelector('.collapsible').dataset.id = id
+
+        resultsTableRow.forEach((html) => {
+            const t = document.createElement('template')
+            t.innerHTML = html
+            resultBody.querySelector('.collapsible').appendChild(t.content)
+        })
+
+        if (log) {
+            // Wrap lines starting with "E" with span.error to color those lines red
+            const wrappedLog = log.replace(/^E.*$/gm, (match) => `<span class="error">${match}</span>`)
+            resultBody.querySelector('.log').innerHTML = wrappedLog
+        } else {
+            resultBody.querySelector('.log').remove()
+        }
+
+        if (collapsed) {
+            resultBody.querySelector('.collapsible > .col-result')?.classList.add('collapsed')
+            resultBody.querySelector('.extras-row').classList.add('hidden')
+        } else {
+            resultBody.querySelector('.collapsible > .col-result')?.classList.remove('collapsed')
+        }
+
+        const media = []
+        extras?.forEach(({ name, format_type, content }) => {
+            if (['image', 'video'].includes(format_type)) {
+                media.push({ path: content, name, format_type })
+            }
+
+            if (format_type === 'html') {
+                resultBody.querySelector('.extraHTML').insertAdjacentHTML('beforeend', `<div>${content}</div>`)
+            }
+        })
+        mediaViewer.setup(resultBody, media)
+
+        // Add custom html from the pytest_html_results_table_html hook
+        tableHtml?.forEach((item) => {
+            resultBody.querySelector('td[class="extra"]').insertAdjacentHTML('beforeend', item)
+        })
+
+        return resultBody
+    },
+}
+
+module.exports = {
+    dom,
+    htmlToElements,
+    find,
+    findAll,
+}
+
+},{"./mediaviewer.js":6}],3:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const storageModule = require('./storage.js')
+
+const getFilteredSubSet = (filter) =>
+    manager.allData.tests.filter(({ result }) => filter.includes(result.toLowerCase()))
+
+const doInitFilter = () => {
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+}
+
+const doFilter = (type, show) => {
+    if (show) {
+        storageModule.showCategory(type)
+    } else {
+        storageModule.hideCategory(type)
+    }
+
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+
+    const sortColumn = storageModule.getSort()
+    doSort(sortColumn, true)
+}
+
+module.exports = {
+    doFilter,
+    doInitFilter,
+}
+
+},{"./datamanager.js":1,"./sort.js":7,"./storage.js":8}],4:[function(require,module,exports){
+const { redraw, bindEvents, renderStatic } = require('./main.js')
+const { doInitFilter } = require('./filter.js')
+const { doInitSort } = require('./sort.js')
+const { manager } = require('./datamanager.js')
+const data = JSON.parse(document.getElementById('data-container').dataset.jsonblob)
+
+function init() {
+    manager.setManager(data)
+    doInitFilter()
+    doInitSort()
+    renderStatic()
+    redraw()
+    bindEvents()
+}
+
+init()
+
+},{"./datamanager.js":1,"./filter.js":3,"./main.js":5,"./sort.js":7}],5:[function(require,module,exports){
+const { dom, find, findAll } = require('./dom.js')
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const { doFilter } = require('./filter.js')
+const {
+    getVisible,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    getSortDirection,
+    possibleFilters,
+} = require('./storage.js')
+
+const removeChildren = (node) => {
+    while (node.firstChild) {
+        node.removeChild(node.firstChild)
+    }
+}
+
+const renderStatic = () => {
+    const renderEnvironmentTable = () => {
+        const environment = manager.environment
+        const rows = Object.keys(environment).map((key) => dom.getStaticRow(key, environment[key]))
+        const table = document.getElementById('environment')
+        removeChildren(table)
+        rows.forEach((row) => table.appendChild(row))
+    }
+    renderEnvironmentTable()
+}
+
+const addItemToggleListener = (elem) => {
+    elem.addEventListener('click', ({ target }) => {
+        const id = target.parentElement.dataset.id
+        manager.toggleCollapsedItem(id)
+
+        const collapsedIds = getCollapsedIds()
+        if (collapsedIds.includes(id)) {
+            const updated = collapsedIds.filter((item) => item !== id)
+            setCollapsedIds(updated)
+        } else {
+            collapsedIds.push(id)
+            setCollapsedIds(collapsedIds)
+        }
+        redraw()
+    })
+}
+
+const renderContent = (tests) => {
+    const sortAttr = getSort(manager.initialSort)
+    const sortAsc = JSON.parse(getSortDirection())
+    const rows = tests.map(dom.getResultTBody)
+    const table = document.getElementById('results-table')
+    const tableHeader = document.getElementById('results-table-head')
+
+    const newTable = document.createElement('table')
+    newTable.id = 'results-table'
+
+    // remove all sorting classes and set the relevant
+    findAll('.sortable', tableHeader).forEach((elem) => elem.classList.remove('asc', 'desc'))
+    tableHeader.querySelector(`.sortable[data-column-type="${sortAttr}"]`)?.classList.add(sortAsc ? 'desc' : 'asc')
+    newTable.appendChild(tableHeader)
+
+    if (!rows.length) {
+        const emptyTable = document.getElementById('template_results-table__body--empty').content.cloneNode(true)
+        newTable.appendChild(emptyTable)
+    } else {
+        rows.forEach((row) => {
+            if (!!row) {
+                findAll('.collapsible td:not(.col-links', row).forEach(addItemToggleListener)
+                find('.logexpander', row).addEventListener('click',
+                    (evt) => evt.target.parentNode.classList.toggle('expanded'),
+                )
+                newTable.appendChild(row)
+            }
+        })
+    }
+
+    table.replaceWith(newTable)
+}
+
+const renderDerived = () => {
+    const currentFilter = getVisible()
+    possibleFilters.forEach((result) => {
+        const input = document.querySelector(`input[data-test-result="${result}"]`)
+        input.checked = currentFilter.includes(result)
+    })
+}
+
+const bindEvents = () => {
+    const filterColumn = (evt) => {
+        const { target: element } = evt
+        const { testResult } = element.dataset
+
+        doFilter(testResult, element.checked)
+        const collapsedIds = getCollapsedIds()
+        const updated = manager.renderData.tests.map((test) => {
+            return {
+                ...test,
+                collapsed: collapsedIds.includes(test.id),
+            }
+        })
+        manager.setRender(updated)
+        redraw()
+    }
+
+    const header = document.getElementById('environment-header')
+    header.addEventListener('click', () => {
+        const table = document.getElementById('environment')
+        table.classList.toggle('hidden')
+        header.classList.toggle('collapsed')
+    })
+
+    findAll('input[name="filter_checkbox"]').forEach((elem) => {
+        elem.addEventListener('click', filterColumn)
+    })
+
+    findAll('.sortable').forEach((elem) => {
+        elem.addEventListener('click', (evt) => {
+            const { target: element } = evt
+            const { columnType } = element.dataset
+            doSort(columnType)
+            redraw()
+        })
+    })
+
+    document.getElementById('show_all_details').addEventListener('click', () => {
+        manager.allCollapsed = false
+        setCollapsedIds([])
+        redraw()
+    })
+    document.getElementById('hide_all_details').addEventListener('click', () => {
+        manager.allCollapsed = true
+        const allIds = manager.renderData.tests.map((test) => test.id)
+        setCollapsedIds(allIds)
+        redraw()
+    })
+}
+
+const redraw = () => {
+    const { testSubset } = manager
+
+    renderContent(testSubset)
+    renderDerived()
+}
+
+module.exports = {
+    redraw,
+    bindEvents,
+    renderStatic,
+}
+
+},{"./datamanager.js":1,"./dom.js":2,"./filter.js":3,"./sort.js":7,"./storage.js":8}],6:[function(require,module,exports){
+class MediaViewer {
+    constructor(assets) {
+        this.assets = assets
+        this.index = 0
+    }
+
+    nextActive() {
+        this.index = this.index === this.assets.length - 1 ? 0 : this.index + 1
+        return [this.activeFile, this.index]
+    }
+
+    prevActive() {
+        this.index = this.index === 0 ? this.assets.length - 1 : this.index -1
+        return [this.activeFile, this.index]
+    }
+
+    get currentIndex() {
+        return this.index
+    }
+
+    get activeFile() {
+        return this.assets[this.index]
+    }
+}
+
+
+const setup = (resultBody, assets) => {
+    if (!assets.length) {
+        resultBody.querySelector('.media').classList.add('hidden')
+        return
+    }
+
+    const mediaViewer = new MediaViewer(assets)
+    const container = resultBody.querySelector('.media-container')
+    const leftArrow = resultBody.querySelector('.media-container__nav--left')
+    const rightArrow = resultBody.querySelector('.media-container__nav--right')
+    const mediaName = resultBody.querySelector('.media__name')
+    const counter = resultBody.querySelector('.media__counter')
+    const imageEl = resultBody.querySelector('img')
+    const sourceEl = resultBody.querySelector('source')
+    const videoEl = resultBody.querySelector('video')
+
+    const setImg = (media, index) => {
+        if (media?.format_type === 'image') {
+            imageEl.src = media.path
+
+            imageEl.classList.remove('hidden')
+            videoEl.classList.add('hidden')
+        } else if (media?.format_type === 'video') {
+            sourceEl.src = media.path
+
+            videoEl.classList.remove('hidden')
+            imageEl.classList.add('hidden')
+        }
+
+        mediaName.innerText = media?.name
+        counter.innerText = `${index + 1} / ${assets.length}`
+    }
+    setImg(mediaViewer.activeFile, mediaViewer.currentIndex)
+
+    const moveLeft = () => {
+        const [media, index] = mediaViewer.prevActive()
+        setImg(media, index)
+    }
+    const doRight = () => {
+        const [media, index] = mediaViewer.nextActive()
+        setImg(media, index)
+    }
+    const openImg = () => {
+        window.open(mediaViewer.activeFile.path, '_blank')
+    }
+    if (assets.length === 1) {
+        container.classList.add('media-container--fullscreen')
+    } else {
+        leftArrow.addEventListener('click', moveLeft)
+        rightArrow.addEventListener('click', doRight)
+    }
+    imageEl.addEventListener('click', openImg)
+}
+
+module.exports = {
+    setup,
+}
+
+},{}],7:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const storageModule = require('./storage.js')
+
+const genericSort = (list, key, ascending, customOrder) => {
+    let sorted
+    if (customOrder) {
+        sorted = list.sort((a, b) => {
+            const aValue = a.result.toLowerCase()
+            const bValue = b.result.toLowerCase()
+
+            const aIndex = customOrder.findIndex((item) => item.toLowerCase() === aValue)
+            const bIndex = customOrder.findIndex((item) => item.toLowerCase() === bValue)
+
+            // Compare the indices to determine the sort order
+            return aIndex - bIndex
+        })
+    } else {
+        sorted = list.sort((a, b) => a[key] === b[key] ? 0 : a[key] > b[key] ? 1 : -1)
+    }
+
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const durationSort = (list, ascending) => {
+    const parseDuration = (duration) => {
+        if (duration.includes(':')) {
+            // If it's in the format "HH:mm:ss"
+            const [hours, minutes, seconds] = duration.split(':').map(Number)
+            return (hours * 3600 + minutes * 60 + seconds) * 1000
+        } else {
+            // If it's in the format "nnn ms"
+            return parseInt(duration)
+        }
+    }
+    const sorted = list.sort((a, b) => parseDuration(a['duration']) - parseDuration(b['duration']))
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const doInitSort = () => {
+    const type = storageModule.getSort(manager.initialSort)
+    const ascending = storageModule.getSortDirection()
+    const list = manager.testSubset
+    const initialOrder = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed', 'Skipped', 'Passed']
+
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    if (type?.toLowerCase() === 'original') {
+        manager.setRender(list)
+    } else {
+        let sortedList
+        switch (type) {
+        case 'duration':
+            sortedList = durationSort(list, ascending)
+            break
+        case 'result':
+            sortedList = genericSort(list, type, ascending, initialOrder)
+            break
+        default:
+            sortedList = genericSort(list, type, ascending)
+            break
+        }
+        manager.setRender(sortedList)
+    }
+}
+
+const doSort = (type, skipDirection) => {
+    const newSortType = storageModule.getSort(manager.initialSort) !== type
+    const currentAsc = storageModule.getSortDirection()
+    let ascending
+    if (skipDirection) {
+        ascending = currentAsc
+    } else {
+        ascending = newSortType ? false : !currentAsc
+    }
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    const list = manager.testSubset
+    const sortedList = type === 'duration' ? durationSort(list, ascending) : genericSort(list, type, ascending)
+    manager.setRender(sortedList)
+}
+
+module.exports = {
+    doInitSort,
+    doSort,
+}
+
+},{"./datamanager.js":1,"./storage.js":8}],8:[function(require,module,exports){
+const possibleFilters = [
+    'passed',
+    'skipped',
+    'failed',
+    'error',
+    'xfailed',
+    'xpassed',
+    'rerun',
+]
+
+const getVisible = () => {
+    const url = new URL(window.location.href)
+    const settings = new URLSearchParams(url.search).get('visible')
+    const lower = (item) => {
+        const lowerItem = item.toLowerCase()
+        if (possibleFilters.includes(lowerItem)) {
+            return lowerItem
+        }
+        return null
+    }
+    return settings === null ?
+        possibleFilters :
+        [...new Set(settings?.split(',').map(lower).filter((item) => item))]
+}
+
+const hideCategory = (categoryToHide) => {
+    const url = new URL(window.location.href)
+    const visibleParams = new URLSearchParams(url.search).get('visible')
+    const currentVisible = visibleParams ? visibleParams.split(',') : [...possibleFilters]
+    const settings = [...new Set(currentVisible)].filter((f) => f !== categoryToHide).join(',')
+
+    url.searchParams.set('visible', settings)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const showCategory = (categoryToShow) => {
+    if (typeof window === 'undefined') {
+        return
+    }
+    const url = new URL(window.location.href)
+    const currentVisible = new URLSearchParams(url.search).get('visible')?.split(',').filter(Boolean) ||
+        [...possibleFilters]
+    const settings = [...new Set([categoryToShow, ...currentVisible])]
+    const noFilter = possibleFilters.length === settings.length || !settings.length
+
+    noFilter ? url.searchParams.delete('visible') : url.searchParams.set('visible', settings.join(','))
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getSort = (initialSort) => {
+    const url = new URL(window.location.href)
+    let sort = new URLSearchParams(url.search).get('sort')
+    if (!sort) {
+        sort = initialSort || 'result'
+    }
+    return sort
+}
+
+const setSort = (type) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('sort', type)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getCollapsedCategory = (renderCollapsed) => {
+    let categories
+    if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        const collapsedItems = new URLSearchParams(url.search).get('collapsed')
+        switch (true) {
+        case !renderCollapsed && collapsedItems === null:
+            categories = ['passed']
+            break
+        case collapsedItems?.length === 0 || /^["']{2}$/.test(collapsedItems):
+            categories = []
+            break
+        case /^all$/.test(collapsedItems) || collapsedItems === null && /^all$/.test(renderCollapsed):
+            categories = [...possibleFilters]
+            break
+        default:
+            categories = collapsedItems?.split(',').map((item) => item.toLowerCase()) || renderCollapsed
+            break
+        }
+    } else {
+        categories = []
+    }
+    return categories
+}
+
+const getSortDirection = () => JSON.parse(sessionStorage.getItem('sortAsc')) || false
+const setSortDirection = (ascending) => sessionStorage.setItem('sortAsc', ascending)
+
+const getCollapsedIds = () => JSON.parse(sessionStorage.getItem('collapsedIds')) || []
+const setCollapsedIds = (list) => sessionStorage.setItem('collapsedIds', JSON.stringify(list))
+
+module.exports = {
+    getVisible,
+    hideCategory,
+    showCategory,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    setSort,
+    getSortDirection,
+    setSortDirection,
+    getCollapsedCategory,
+    possibleFilters,
+}
+
+},{}]},{},[4]);
+    </script>
+  </footer>
+  </body>
+</html>

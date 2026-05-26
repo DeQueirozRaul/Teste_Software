@@ -4,3 +4,4 @@ pandas
 openpyxl
 pytest
 pytest-html
+playwright

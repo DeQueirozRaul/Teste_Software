@@ -11,6 +11,8 @@ Este projeto é a materialização do Documento de Visão de um sistema desktop 
 
 
 ## 🛠️ Tecnologias Utilizadas
+
+### Aplicação
 * **Python 3**: linguagem principal do projeto.
 * **Tkinter**: base nativa da interface desktop.
 * **CustomTkinter**: componentes visuais modernos para o aplicativo desktop.
@@ -18,8 +20,12 @@ Este projeto é a materialização do Documento de Visão de um sistema desktop 
 * **SQLite3**: banco de dados local usado para usuários e notas fiscais.
 * **Pandas**: tratamento de dados para exportação de relatórios.
 * **OpenPyXL**: geração de arquivos Excel `.xlsx`.
-* **Pytest**: testes automatizados de sistema, API e E2E.
-* **Pytest HTML**: geração dos relatórios HTML das rodadas de teste.
+
+### Suíte de Testes
+* **Pytest**: framework principal dos testes automatizados unitários, de API e E2E.
+* **Flask test_client**: cliente de teste usado para validar endpoints da API sem depender de servidor externo.
+* **Playwright**: automação dos testes E2E em navegador Chromium headless.
+* **Pytest HTML**: geração do relatório HTML da execução dos testes.
 
 ## 🚀 Como executar o projeto
 1. Crie e ative um ambiente virtual, se necessário: `python -m venv .venv`
@@ -33,25 +39,6 @@ Credenciais padrão:
 * **Administrador:** `admin` / `admin`
 * **Gerente:** `gerente` / `123`
 * **Operador:** `caixa` / `123`
-
-## 🌐 API Flask
-A API sobe localmente quando o sistema é iniciado pelo `app.py`:
-
-`http://127.0.0.1:5000`
-
-
-Endpoints disponíveis:
-* `GET /api/health`: verifica se a API está online.
-* `POST /api/login`: autentica usuário.
-* `GET /api/notas`: lista notas fiscais cadastradas.
-* `GET /api/notas?busca=Venda`: lista notas filtrando por estabelecimento, categoria ou descrição.
-* `GET /api/notas?inicio=01/01/2026&fim=31/01/2026`: lista notas por período.
-* `POST /api/notas`: cadastra uma nova nota.
-* `PUT /api/notas/<id>`: edita uma nota existente (somente Administrador).
-* `DELETE /api/notas/<id>`: exclui uma nota existente (somente Administrador).
-* `GET /api/resumo`: retorna entradas, saídas e saldo.
-
-Para editar ou excluir via API, envie o nível do usuário como `Administrador` no corpo JSON, no parâmetro `nivel` ou no header `X-User-Level`.
 
 
 ## 📁 Estrutura do projeto
