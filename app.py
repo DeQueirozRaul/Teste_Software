@@ -3,9 +3,6 @@ from threading import Thread
 
 from backend.api import criar_app
 from backend.database import init_db
-from backend.services import calcular_resumo_financeiro
-from backend.services import data_para_db, data_para_ui
-from backend.services import validar_data_emissao, validar_valor_nota
 from frontend.interface import NfeSystem
 
 

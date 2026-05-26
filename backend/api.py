@@ -32,6 +32,35 @@ def garantir_banco(db_path):
         os.chdir(cwd_original)
 
 
+def nivel_eh_admin(dados=None):
+    dados = dados or {}
+    nivel = (
+        request.headers.get("X-User-Level")
+        or request.args.get("nivel")
+        or dados.get("nivel")
+        or dados.get("user_level")
+    )
+    return nivel == "Administrador"
+
+
+def validar_dados_nota(dados):
+    if not validar_data_emissao(dados.get("data", "")):
+        return "Data inválida ou no futuro", None, None
+
+    if not validar_valor_nota(str(dados.get("valor", ""))):
+        return "O valor deve ser positivo", None, None
+
+    if not dados.get("estabelecimento"):
+        return "Preencha o estabelecimento", None, None
+
+    if dados.get("tipo", "Entrada") not in ("Entrada", "Saída"):
+        return "Tipo deve ser Entrada ou Saída", None, None
+
+    data_db = data_para_db(dados["data"])
+    valor = float(str(dados["valor"]).replace(",", "."))
+    return None, data_db, valor
+
+
 def criar_app(db_path="notas_fiscais.db"):
     app = Flask(__name__)
     app.config["DB_PATH"] = str(db_path)
@@ -104,20 +133,10 @@ def criar_app(db_path="notas_fiscais.db"):
     def criar_nota():
         dados = request.get_json(silent=True) or {}
 
-        if not validar_data_emissao(dados.get("data", "")):
-            return jsonify({"erro": "Data inválida ou no futuro"}), 400
+        erro, data_db, valor = validar_dados_nota(dados)
+        if erro:
+            return jsonify({"erro": erro}), 400
 
-        if not validar_valor_nota(str(dados.get("valor", ""))):
-            return jsonify({"erro": "O valor deve ser positivo"}), 400
-
-        if not dados.get("estabelecimento"):
-            return jsonify({"erro": "Preencha o estabelecimento"}), 400
-
-        if dados.get("tipo", "Entrada") not in ("Entrada", "Saída"):
-            return jsonify({"erro": "Tipo deve ser Entrada ou Saída"}), 400
-
-        data_db = data_para_db(dados["data"])
-        valor = float(str(dados["valor"]).replace(",", "."))
         conn = conectar(app.config["DB_PATH"])
         try:
             cursor = conn.execute(
@@ -142,6 +161,61 @@ def criar_app(db_path="notas_fiscais.db"):
             conn.close()
 
         return jsonify({"id": nota_id}), 201
+
+    @app.put("/api/notas/<int:nota_id>")
+    def editar_nota(nota_id):
+        dados = request.get_json(silent=True) or {}
+        if not nivel_eh_admin(dados):
+            return jsonify({"erro": "Apenas administradores podem editar operações"}), 403
+
+        erro, data_db, valor = validar_dados_nota(dados)
+        if erro:
+            return jsonify({"erro": erro}), 400
+
+        conn = conectar(app.config["DB_PATH"])
+        try:
+            cursor = conn.execute(
+                """
+                UPDATE notas
+                SET data = ?, valor = ?, estabelecimento = ?, categoria = ?,
+                    tipo = ?, descricao = ?, arquivo_xml = ?
+                WHERE id = ?
+                """,
+                (
+                    data_db,
+                    valor,
+                    dados["estabelecimento"],
+                    dados.get("categoria", ""),
+                    dados.get("tipo", "Entrada"),
+                    dados.get("descricao", ""),
+                    dados.get("arquivo_xml", ""),
+                    nota_id,
+                ),
+            )
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "Operação não encontrada"}), 404
+        finally:
+            conn.close()
+
+        return jsonify({"status": "atualizada", "id": nota_id})
+
+    @app.delete("/api/notas/<int:nota_id>")
+    def excluir_nota(nota_id):
+        dados = request.get_json(silent=True) or {}
+        if not nivel_eh_admin(dados):
+            return jsonify({"erro": "Apenas administradores podem excluir operações"}), 403
+
+        conn = conectar(app.config["DB_PATH"])
+        try:
+            cursor = conn.execute("DELETE FROM notas WHERE id = ?", (nota_id,))
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "Operação não encontrada"}), 404
+        finally:
+            conn.close()
+
+        return jsonify({"status": "excluida", "id": nota_id})
 
     @app.get("/api/resumo")
     def resumo():

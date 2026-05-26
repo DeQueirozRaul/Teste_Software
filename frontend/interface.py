@@ -1,14 +1,12 @@
 import customtkinter as ctk
 from tkinter import filedialog
-import sqlite3
-import xml.etree.ElementTree as ET
 import os
+import json
+from collections import defaultdict
 from datetime import datetime
 import calendar
+from urllib import error, parse, request
 import pandas as pd
-from backend.database import init_db
-from backend.services import calcular_resumo_financeiro
-from backend.services import data_para_db, data_para_ui
 from backend.services import validar_data_emissao, validar_valor_nota
 
 # --- CONFIGURAÇÃO PREMIUM ---
@@ -25,7 +23,7 @@ SUCCESS_COLOR = "#10B981"
 DANGER_COLOR = "#EF4444"      
 TEXT_GRAY = "#9CA3AF"         
 BORDER_COLOR = "#2A2B30"      
-DB_PATH = 'notas_fiscais.db'
+API_BASE_URL = "http://127.0.0.1:5000/api"
 
 # Larguras da Tabela
 COL0_W = 160  
@@ -122,6 +120,40 @@ class NfeSystem(ctk.CTk):
         
         self.show_login_screen()
 
+    def api_request(self, metodo, endpoint, dados=None, params=None):
+        url = f"{API_BASE_URL}{endpoint}"
+        if params:
+            params_limpos = {k: v for k, v in params.items() if v}
+            if params_limpos:
+                url += "?" + parse.urlencode(params_limpos)
+
+        payload = None
+        headers = {"Content-Type": "application/json"}
+        if dados is not None:
+            payload = json.dumps(dados).encode("utf-8")
+
+        req = request.Request(url, data=payload, headers=headers, method=metodo)
+        try:
+            with request.urlopen(req, timeout=5) as resp:
+                corpo = resp.read().decode("utf-8")
+                return json.loads(corpo) if corpo else {}
+        except error.HTTPError as e:
+            corpo = e.read().decode("utf-8")
+            try:
+                detalhe = json.loads(corpo).get("erro", corpo)
+            except json.JSONDecodeError:
+                detalhe = corpo or str(e)
+            raise RuntimeError(detalhe) from e
+        except error.URLError as e:
+            raise RuntimeError("API indisponível. Verifique se o servidor Flask está em execução.") from e
+
+    def buscar_notas_api(self, busca="", inicio="", fim=""):
+        return self.api_request(
+            "GET",
+            "/notas",
+            params={"busca": busca, "inicio": inicio, "fim": fim},
+        )
+
     def show_toast(self, mensagem, tipo="sucesso"):
         cor_fundo = SUCCESS_COLOR if tipo == "sucesso" else DANGER_COLOR
         icone = "✅ " if tipo == "sucesso" else "⚠️ "
@@ -162,28 +194,19 @@ class NfeSystem(ctk.CTk):
     def login(self):
         usr = self.user.get()
         pwd = self.pwd.get()
-        
-        init_db()
 
-        conn = None
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("SELECT nivel FROM usuarios WHERE username = ? AND password = ?", (usr, pwd))
-            resultado = cursor.fetchone()
-
-            if resultado:
-                self.user_level = resultado[0] 
-                self.show_toast(f"Bem-vindo! Acesso: {self.user_level}", "sucesso")
-                self.login_frame.destroy()
-                self.setup_dashboard()
-            else:
-                self.show_toast("Credenciais inválidas.", "erro")
+            usuario = self.api_request(
+                "POST",
+                "/login",
+                {"username": usr, "password": pwd},
+            )
+            self.user_level = usuario["nivel"]
+            self.show_toast(f"Bem-vindo! Acesso: {self.user_level}", "sucesso")
+            self.login_frame.destroy()
+            self.setup_dashboard()
         except Exception as e:
             self.show_toast(f"Erro no login: {e}", "erro")
-        finally:
-            if conn:
-                conn.close()
 
     # --- SIDEBAR REDESENHADA ---
     def setup_dashboard(self):
@@ -216,6 +239,12 @@ class NfeSystem(ctk.CTk):
             self.btn_nav_relatorios.pack(fill="x", padx=15, pady=5)
         else:
             self.btn_nav_relatorios = None
+
+        if self.user_level == "Administrador":
+            self.btn_nav_gerenciar = ctk.CTkButton(self.sidebar, text="🛠 Gerenciar Operações", anchor="w", height=45, fg_color="transparent", font=("Segoe UI", 15), command=lambda: self.show_page("gerenciar"))
+            self.btn_nav_gerenciar.pack(fill="x", padx=15, pady=5)
+        else:
+            self.btn_nav_gerenciar = None
         
         btn_sair = ctk.CTkButton(self.sidebar, text="🚪 Sair do Sistema", anchor="w", height=45, fg_color="transparent", hover_color="#3F0000", text_color=DANGER_COLOR, font=("Segoe UI", 15), command=self.destroy)
         btn_sair.pack(side="bottom", fill="x", padx=15, pady=20)
@@ -230,6 +259,8 @@ class NfeSystem(ctk.CTk):
         self.setup_visualizar()
         if self.user_level in ["Administrador", "Gerente"]:
             self.setup_relatorios()
+        if self.user_level == "Administrador":
+            self.setup_gerenciar()
             
         self.show_page("visualizar", carregar=False)
         self.after(100, self.carregar_notas_cadastradas)
@@ -243,8 +274,12 @@ class NfeSystem(ctk.CTk):
         
         if self.btn_nav_relatorios:
             self.btn_nav_relatorios.configure(fg_color=CARD_COLOR if name == "relatorios" else "transparent")
+
+        if self.btn_nav_gerenciar:
+            self.btn_nav_gerenciar.configure(fg_color=CARD_COLOR if name == "gerenciar" else "transparent")
         
         if name == "visualizar" and carregar: self.carregar_notas_cadastradas()
+        if name == "gerenciar" and carregar: self.carregar_operacoes_admin()
 
     def open_calendar(self, entry_widget):
         CTkCalendar(self, entry_widget)
@@ -295,21 +330,30 @@ class NfeSystem(ctk.CTk):
     def salvar(self):
         if not validar_data_emissao(self.ent_data.get()): return self.show_toast("Data inválida ou no futuro!", "erro")
         if not validar_valor_nota(self.ent_val.get()): return self.show_toast("O valor deve ser positivo!", "erro")
-        dt = data_para_db(self.ent_data.get())
         if not self.ent_est.get(): return self.show_toast("Preencha o estabelecimento.", "erro")
             
         try:
-            conn = sqlite3.connect('notas_fiscais.db')
-            conn.execute("INSERT INTO notas (data, valor, estabelecimento, categoria, tipo, descricao, arquivo_xml) VALUES (?,?,?,?,?,?,?)",
-                         (dt, float(self.ent_val.get().replace(',','.')), self.ent_est.get(), self.ent_cat.get(), self.ent_tipo.get(), self.ent_desc.get(), self.current_file_path))
-            conn.commit(); conn.close()
+            self.api_request(
+                "POST",
+                "/notas",
+                {
+                    "data": self.ent_data.get(),
+                    "valor": self.ent_val.get(),
+                    "estabelecimento": self.ent_est.get(),
+                    "categoria": self.ent_cat.get(),
+                    "tipo": self.ent_tipo.get(),
+                    "descricao": self.ent_desc.get(),
+                    "arquivo_xml": self.current_file_path,
+                },
+            )
             self.show_toast("Registro salvo no Livro Caixa!", "sucesso")
             
             self.ent_est.delete(0, 'end'); self.ent_data.delete(0, 'end')
             self.ent_val.delete(0, 'end'); self.ent_cat.delete(0, 'end'); self.ent_desc.delete(0, 'end')
             self.lbl_arquivo.configure(text="Nenhum arquivo", text_color=TEXT_GRAY); self.current_file_path = ""
-        except:
-            self.show_toast("Erro ao salvar no banco.", "erro")
+            self.carregar_notas_cadastradas()
+        except Exception as e:
+            self.show_toast(f"Erro ao salvar pela API: {e}", "erro")
 
     def limpar_filtros(self):
         self.f_txt.delete(0, 'end')
@@ -384,33 +428,14 @@ class NfeSystem(ctk.CTk):
     def carregar_notas_cadastradas(self):
         for w in self.scroll.winfo_children(): w.destroy()
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            
-            filtros = " WHERE 1=1"
-            params = []
-            if self.f_txt.get(): 
-                filtros += " AND (estabelecimento LIKE ? OR descricao LIKE ? OR categoria LIKE ?)"
-                params.extend(['%'+self.f_txt.get()+'%', '%'+self.f_txt.get()+'%', '%'+self.f_txt.get()+'%'])
-            if self.f_ini.get():
-                dt = data_para_db(self.f_ini.get()); 
-                if dt: filtros += " AND data >= ?"; params.append(dt)
-            if self.f_fim.get():
-                dt = data_para_db(self.f_fim.get()); 
-                if dt: filtros += " AND data <= ?"; params.append(dt)
-            
-            cursor.execute(
-                f"""
-                SELECT
-                    COALESCE(SUM(CASE WHEN tipo = 'Entrada' THEN valor ELSE 0 END), 0),
-                    COALESCE(SUM(CASE WHEN tipo = 'Saída' THEN valor ELSE 0 END), 0)
-                FROM notas
-                {filtros}
-                """,
-                params,
+            notas = self.buscar_notas_api(
+                busca=self.f_txt.get(),
+                inicio=self.f_ini.get(),
+                fim=self.f_fim.get(),
             )
-            entradas, saidas = cursor.fetchone()
 
+            entradas = sum(n["valor"] for n in notas if n["tipo"] == "Entrada")
+            saidas = sum(n["valor"] for n in notas if n["tipo"] == "Saída")
             resumo = {
                 'entradas': entradas,
                 'saidas': saidas,
@@ -421,17 +446,26 @@ class NfeSystem(ctk.CTk):
             self.lbl_saldo.configure(text=f"R$ {resumo['saldo']:,.2f}", text_color=SUCCESS_COLOR if resumo['saldo'] >= 0 else DANGER_COLOR)
 
             limite = 100
-            query_grupo = f"""
-                SELECT data, categoria, tipo, SUM(valor), COUNT(id)
-                FROM notas
-                {filtros}
-                GROUP BY data, categoria, tipo
-                ORDER BY data DESC
-                LIMIT ?
-            """
-            cursor.execute(query_grupo, params + [limite + 1])
-            registros_agrupados = cursor.fetchall()
-            conn.close()
+            grupos = defaultdict(lambda: {"valor": 0.0, "quantidade": 0})
+            for nota in notas:
+                chave = (nota["data"], nota["categoria"], nota["tipo"])
+                grupos[chave]["valor"] += nota["valor"]
+                grupos[chave]["quantidade"] += 1
+
+            registros_agrupados = sorted(
+                [
+                    {
+                        "data": data,
+                        "categoria": categoria,
+                        "tipo": tipo,
+                        "valor": dados["valor"],
+                        "quantidade": dados["quantidade"],
+                    }
+                    for (data, categoria, tipo), dados in grupos.items()
+                ],
+                key=lambda item: datetime.strptime(item["data"], "%d/%m/%Y"),
+                reverse=True,
+            )
 
             for r in registros_agrupados[:limite]:
                 card = ctk.CTkFrame(self.scroll, fg_color=CARD_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
@@ -447,28 +481,226 @@ class NfeSystem(ctk.CTk):
                 col0_frame.grid(row=0, column=0, sticky="w", padx=(20, 10), pady=12)
                 
                 # NOVO: Ícones tipo texto sólidos que não quebram o layout no Windows
-                cor_icone = SUCCESS_COLOR if r[2] == "Entrada" else DANGER_COLOR
+                cor_icone = SUCCESS_COLOR if r["tipo"] == "Entrada" else DANGER_COLOR
                 ctk.CTkLabel(col0_frame, text="●", text_color=cor_icone, font=("Segoe UI", 18)).pack(side="left", padx=(0, 10))
-                ctk.CTkLabel(col0_frame, text=data_para_ui(r[0]), text_color=TEXT_GRAY).pack(side="left")
+                ctk.CTkLabel(col0_frame, text=r["data"], text_color=TEXT_GRAY).pack(side="left")
                 
-                titulo = "Resumo Diário de Vendas" if r[2] == "Entrada" else "Despesas / Compras"
+                titulo = "Resumo Diário de Vendas" if r["tipo"] == "Entrada" else "Despesas / Compras"
                 ctk.CTkLabel(card, text=titulo, font=("Segoe UI", 14, "bold"), anchor="w", text_color="white").grid(row=0, column=1, sticky="w", padx=10, pady=12)
                 
                 badge = ctk.CTkFrame(card, fg_color="transparent", border_width=1, border_color=BORDER_COLOR, corner_radius=6)
                 badge.grid(row=0, column=2, sticky="w", padx=10, pady=12)
-                ctk.CTkLabel(badge, text=r[1], text_color="#D1D5DB", font=("Segoe UI", 11)).pack(padx=10, pady=2)
+                ctk.CTkLabel(badge, text=r["categoria"], text_color="#D1D5DB", font=("Segoe UI", 11)).pack(padx=10, pady=2)
                 
-                qtd_texto = f"📦 {r[4]} operação registrada" if r[4] == 1 else f"📦 {r[4]} operações agrupadas"
+                qtd_texto = f"📦 {r['quantidade']} operação registrada" if r["quantidade"] == 1 else f"📦 {r['quantidade']} operações agrupadas"
                 ctk.CTkLabel(card, text=qtd_texto, text_color=TEXT_GRAY, font=("Segoe UI", 12), anchor="w").grid(row=0, column=3, sticky="w", padx=10, pady=12)
                 
-                cor_valor = SUCCESS_COLOR if r[2] == "Entrada" else DANGER_COLOR
-                sinal = "+" if r[2] == "Entrada" else "-"
-                ctk.CTkLabel(card, text=f"{sinal} R$ {r[3]:,.2f}", text_color=cor_valor, font=("Segoe UI", 15, "bold"), anchor="e").grid(row=0, column=4, sticky="e", padx=(10, 25), pady=12)
+                cor_valor = SUCCESS_COLOR if r["tipo"] == "Entrada" else DANGER_COLOR
+                sinal = "+" if r["tipo"] == "Entrada" else "-"
+                ctk.CTkLabel(card, text=f"{sinal} R$ {r['valor']:,.2f}", text_color=cor_valor, font=("Segoe UI", 15, "bold"), anchor="e").grid(row=0, column=4, sticky="e", padx=(10, 25), pady=12)
                 
             if len(registros_agrupados) > limite:
                 ctk.CTkLabel(self.scroll, text=f"⚠️ Exibindo os {limite} agrupamentos mais recentes.", text_color=TEXT_GRAY, font=("Segoe UI", 12, "italic")).pack(pady=15)
         except Exception as e:
             self.show_toast(f"Erro ao carregar notas: {e}", "erro")
+
+    def setup_gerenciar(self):
+        p = ctk.CTkFrame(self.container, fg_color="transparent")
+        self.pages["gerenciar"] = p
+
+        top_row = ctk.CTkFrame(p, fg_color="transparent")
+        top_row.pack(fill="x", pady=(0, 20))
+        ctk.CTkLabel(top_row, text="Gerenciar Operações", font=("Segoe UI", 32, "bold")).pack(side="left")
+
+        filtros_frame = ctk.CTkFrame(top_row, fg_color=CARD_COLOR, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        filtros_frame.pack(side="right")
+        self.g_txt = ctk.CTkEntry(filtros_frame, placeholder_text="Buscar operação...", width=260, border_width=0, fg_color=CARD_COLOR)
+        self.g_txt.pack(side="left", padx=10, pady=5)
+        ctk.CTkButton(filtros_frame, text="Buscar", width=80, fg_color=ACCENT_COLOR, hover_color=HOVER_COLOR, command=self.carregar_operacoes_admin).pack(side="left", padx=(5, 10), pady=5)
+
+        self.admin_header = ctk.CTkFrame(p, fg_color="transparent", height=30)
+        self.admin_header.pack(fill="x", padx=(15, 30), pady=(5, 5))
+        self.admin_header.grid_columnconfigure(0, minsize=70, weight=0)
+        self.admin_header.grid_columnconfigure(1, minsize=120, weight=0)
+        self.admin_header.grid_columnconfigure(2, weight=1)
+        self.admin_header.grid_columnconfigure(3, minsize=150, weight=0)
+        self.admin_header.grid_columnconfigure(4, minsize=130, weight=0)
+        self.admin_header.grid_columnconfigure(5, minsize=150, weight=0)
+
+        font_header = ("Segoe UI", 12, "bold")
+        ctk.CTkLabel(self.admin_header, text="ID", text_color=TEXT_GRAY, font=font_header, anchor="w").grid(row=0, column=0, sticky="w", padx=(20, 10))
+        ctk.CTkLabel(self.admin_header, text="Data", text_color=TEXT_GRAY, font=font_header, anchor="w").grid(row=0, column=1, sticky="w", padx=10)
+        ctk.CTkLabel(self.admin_header, text="Descrição", text_color=TEXT_GRAY, font=font_header, anchor="w").grid(row=0, column=2, sticky="w", padx=10)
+        ctk.CTkLabel(self.admin_header, text="Categoria", text_color=TEXT_GRAY, font=font_header, anchor="w").grid(row=0, column=3, sticky="w", padx=10)
+        ctk.CTkLabel(self.admin_header, text="Valor", text_color=TEXT_GRAY, font=font_header, anchor="e").grid(row=0, column=4, sticky="e", padx=10)
+        ctk.CTkLabel(self.admin_header, text="Ações", text_color=TEXT_GRAY, font=font_header, anchor="e").grid(row=0, column=5, sticky="e", padx=(10, 25))
+
+        self.scroll_admin = ctk.CTkScrollableFrame(p, fg_color="transparent")
+        self.scroll_admin.pack(fill="both", expand=True)
+
+    def carregar_operacoes_admin(self):
+        if self.user_level != "Administrador":
+            return self.show_toast("Apenas administradores podem gerenciar operações.", "erro")
+
+        for w in self.scroll_admin.winfo_children():
+            w.destroy()
+
+        try:
+            registros = self.buscar_notas_api(busca=self.g_txt.get())[:100]
+
+            if not registros:
+                ctk.CTkLabel(self.scroll_admin, text="Nenhuma operação encontrada.", text_color=TEXT_GRAY, font=("Segoe UI", 14)).pack(pady=30)
+                return
+
+            for r in registros:
+                card = ctk.CTkFrame(self.scroll_admin, fg_color=CARD_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+                card.pack(fill="x", pady=4, padx=10)
+                card.grid_columnconfigure(0, minsize=70, weight=0)
+                card.grid_columnconfigure(1, minsize=120, weight=0)
+                card.grid_columnconfigure(2, weight=1)
+                card.grid_columnconfigure(3, minsize=150, weight=0)
+                card.grid_columnconfigure(4, minsize=130, weight=0)
+                card.grid_columnconfigure(5, minsize=150, weight=0)
+
+                cor_valor = SUCCESS_COLOR if r["tipo"] == "Entrada" else DANGER_COLOR
+                sinal = "+" if r["tipo"] == "Entrada" else "-"
+                descricao = r["descricao"] or r["estabelecimento"]
+
+                ctk.CTkLabel(card, text=str(r["id"]), text_color=TEXT_GRAY, anchor="w").grid(row=0, column=0, sticky="w", padx=(20, 10), pady=12)
+                ctk.CTkLabel(card, text=r["data"], text_color=TEXT_GRAY, anchor="w").grid(row=0, column=1, sticky="w", padx=10, pady=12)
+                ctk.CTkLabel(card, text=descricao, text_color="white", anchor="w").grid(row=0, column=2, sticky="w", padx=10, pady=12)
+                ctk.CTkLabel(card, text=r["categoria"], text_color=TEXT_GRAY, anchor="w").grid(row=0, column=3, sticky="w", padx=10, pady=12)
+                ctk.CTkLabel(card, text=f"{sinal} R$ {r['valor']:,.2f}", text_color=cor_valor, font=("Segoe UI", 13, "bold"), anchor="e").grid(row=0, column=4, sticky="e", padx=10, pady=12)
+
+                acoes = ctk.CTkFrame(card, fg_color="transparent")
+                acoes.grid(row=0, column=5, sticky="e", padx=(10, 20), pady=8)
+                ctk.CTkButton(acoes, text="Editar", width=64, fg_color=ACCENT_COLOR, hover_color=HOVER_COLOR, command=lambda reg=r: self.abrir_editor_operacao(reg)).pack(side="left", padx=(0, 6))
+                ctk.CTkButton(acoes, text="Excluir", width=64, fg_color=DANGER_COLOR, hover_color="#B91C1C", command=lambda nota_id=r["id"]: self.confirmar_exclusao_admin(nota_id)).pack(side="left")
+        except Exception as e:
+            self.show_toast(f"Erro ao carregar operações: {e}", "erro")
+
+    def abrir_editor_operacao(self, registro):
+        if self.user_level != "Administrador":
+            return self.show_toast("Apenas administradores podem editar operações.", "erro")
+
+        janela = ctk.CTkToplevel(self)
+        janela.title(f"Editar Operação #{registro['id']}")
+        janela.geometry("560x560")
+        janela.resizable(False, False)
+        janela.attributes("-topmost", True)
+        janela.configure(fg_color=CARD_COLOR)
+
+        ctk.CTkLabel(janela, text=f"Editar Operação #{registro['id']}", font=("Segoe UI", 24, "bold")).pack(anchor="w", padx=30, pady=(28, 18))
+
+        ent_tipo = ctk.CTkOptionMenu(janela, values=["Entrada", "Saída"], width=500, height=42, fg_color=ACCENT_COLOR, button_color=HOVER_COLOR)
+        ent_tipo.set(registro["tipo"])
+        ent_tipo.pack(pady=8)
+
+        ent_est = ctk.CTkEntry(janela, placeholder_text="Cliente / Fornecedor", width=500, height=42)
+        ent_est.insert(0, registro["estabelecimento"] or "")
+        ent_est.pack(pady=8)
+
+        ent_data = ctk.CTkEntry(janela, placeholder_text="Data de Emissão (DD/MM/YYYY)", width=500, height=42)
+        ent_data.insert(0, registro["data"])
+        ent_data.pack(pady=8)
+
+        ent_val = ctk.CTkEntry(janela, placeholder_text="Valor Total (R$)", width=500, height=42)
+        ent_val.insert(0, str(registro["valor"]).replace(".", ","))
+        ent_val.pack(pady=8)
+
+        ent_cat = ctk.CTkEntry(janela, placeholder_text="Categoria", width=500, height=42)
+        ent_cat.insert(0, registro["categoria"] or "")
+        ent_cat.pack(pady=8)
+
+        ent_desc = ctk.CTkEntry(janela, placeholder_text="Descrição", width=500, height=42)
+        ent_desc.insert(0, registro["descricao"] or "")
+        ent_desc.pack(pady=8)
+
+        botoes = ctk.CTkFrame(janela, fg_color="transparent")
+        botoes.pack(fill="x", padx=30, pady=(24, 0))
+        ctk.CTkButton(botoes, text="Cancelar", width=150, fg_color="transparent", border_width=1, border_color=BORDER_COLOR, text_color=TEXT_GRAY, hover_color=BORDER_COLOR, command=janela.destroy).pack(side="left")
+        ctk.CTkButton(
+            botoes,
+            text="Salvar Alterações",
+            width=220,
+            fg_color=ACCENT_COLOR,
+            hover_color=HOVER_COLOR,
+            command=lambda: self.atualizar_operacao_admin(
+                registro["id"],
+                ent_data.get(),
+                ent_val.get(),
+                ent_est.get(),
+                ent_cat.get(),
+                ent_tipo.get(),
+                ent_desc.get(),
+                registro["arquivo_xml"] or "",
+                janela,
+            ),
+        ).pack(side="right")
+
+    def atualizar_operacao_admin(self, nota_id, data, valor, estabelecimento, categoria, tipo, descricao, arquivo_xml, janela):
+        if self.user_level != "Administrador":
+            return self.show_toast("Apenas administradores podem editar operações.", "erro")
+        if not validar_data_emissao(data):
+            return self.show_toast("Data inválida ou no futuro!", "erro")
+        if not validar_valor_nota(valor):
+            return self.show_toast("O valor deve ser positivo!", "erro")
+        if not estabelecimento:
+            return self.show_toast("Preencha o estabelecimento.", "erro")
+
+        try:
+            self.api_request(
+                "PUT",
+                f"/notas/{nota_id}",
+                {
+                    "nivel": self.user_level,
+                    "data": data,
+                    "valor": valor,
+                    "estabelecimento": estabelecimento,
+                    "categoria": categoria,
+                    "tipo": tipo,
+                    "descricao": descricao,
+                    "arquivo_xml": arquivo_xml,
+                },
+            )
+            janela.destroy()
+            self.carregar_operacoes_admin()
+            self.carregar_notas_cadastradas()
+            self.show_toast("Operação atualizada com sucesso!", "sucesso")
+        except Exception as e:
+            self.show_toast(f"Erro ao atualizar operação: {e}", "erro")
+
+    def confirmar_exclusao_admin(self, nota_id):
+        if self.user_level != "Administrador":
+            return self.show_toast("Apenas administradores podem excluir operações.", "erro")
+
+        janela = ctk.CTkToplevel(self)
+        janela.title("Excluir Operação")
+        janela.geometry("420x190")
+        janela.resizable(False, False)
+        janela.attributes("-topmost", True)
+        janela.configure(fg_color=CARD_COLOR)
+
+        ctk.CTkLabel(janela, text="Excluir operação?", font=("Segoe UI", 22, "bold")).pack(anchor="w", padx=28, pady=(28, 8))
+        ctk.CTkLabel(janela, text=f"A operação #{nota_id} será removida do banco.", text_color=TEXT_GRAY, font=("Segoe UI", 13)).pack(anchor="w", padx=28)
+
+        botoes = ctk.CTkFrame(janela, fg_color="transparent")
+        botoes.pack(fill="x", padx=28, pady=(26, 0))
+        ctk.CTkButton(botoes, text="Cancelar", width=130, fg_color="transparent", border_width=1, border_color=BORDER_COLOR, text_color=TEXT_GRAY, hover_color=BORDER_COLOR, command=janela.destroy).pack(side="left")
+        ctk.CTkButton(botoes, text="Excluir", width=130, fg_color=DANGER_COLOR, hover_color="#B91C1C", command=lambda: self.excluir_operacao_admin(nota_id, janela)).pack(side="right")
+
+    def excluir_operacao_admin(self, nota_id, janela):
+        if self.user_level != "Administrador":
+            return self.show_toast("Apenas administradores podem excluir operações.", "erro")
+
+        try:
+            self.api_request("DELETE", f"/notas/{nota_id}", {"nivel": self.user_level})
+            janela.destroy()
+            self.carregar_operacoes_admin()
+            self.carregar_notas_cadastradas()
+            self.show_toast("Operação excluída com sucesso!", "sucesso")
+        except Exception as e:
+            self.show_toast(f"Erro ao excluir operação: {e}", "erro")
 
     def setup_relatorios(self):
         p = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -513,28 +745,21 @@ class NfeSystem(ctk.CTk):
         self.caixa_relatorio.configure(state="disabled")
 
     def gerar_relatorio(self):
-        conn = sqlite3.connect('notas_fiscais.db')
-        cursor = conn.cursor()
-        query = "SELECT * FROM notas WHERE 1=1"
-        params = []
-        
-        if self.rel_tipo.get() == "Apenas Vendas (Entradas)": query += " AND tipo = 'Entrada'"
-        elif self.rel_tipo.get() == "Apenas Despesas (Saídas)": query += " AND tipo = 'Saída'"
-            
-        if self.rel_txt.get():
-            query += " AND (estabelecimento LIKE ? OR descricao LIKE ? OR categoria LIKE ?)"
-            params.extend(['%'+self.rel_txt.get()+'%', '%'+self.rel_txt.get()+'%', '%'+self.rel_txt.get()+'%'])
-            
-        if self.rel_ini.get():
-            dt = data_para_db(self.rel_ini.get())
-            if dt: query += " AND data >= ?"; params.append(dt)
-        if self.rel_fim.get():
-            dt = data_para_db(self.rel_fim.get())
-            if dt: query += " AND data <= ?"; params.append(dt)
-            
-        cursor.execute(query + " ORDER BY data DESC", params)
-        registros = cursor.fetchall()
-        conn.close()
+        try:
+            registros = self.buscar_notas_api(
+                busca=self.rel_txt.get(),
+                inicio=self.rel_ini.get(),
+                fim=self.rel_fim.get(),
+            )
+        except Exception as e:
+            self.show_toast(f"Erro ao gerar relatório pela API: {e}", "erro")
+            self.btn_exportar.configure(state="disabled")
+            return
+
+        if self.rel_tipo.get() == "Apenas Vendas (Entradas)":
+            registros = [r for r in registros if r["tipo"] == "Entrada"]
+        elif self.rel_tipo.get() == "Apenas Despesas (Saídas)":
+            registros = [r for r in registros if r["tipo"] == "Saída"]
         
         if not registros:
             self.show_toast("Nenhum dado encontrado para esses filtros.", "erro")
@@ -546,9 +771,9 @@ class NfeSystem(ctk.CTk):
             
         vendas = 0.0; fornecedores = 0.0; operacionais = 0.0
         for r in registros:
-            if r[5] == "Entrada": vendas += r[2]
-            elif r[5] == "Saída" and "Estoque" in r[4]: fornecedores += r[2]
-            elif r[5] == "Saída": operacionais += r[2]
+            if r["tipo"] == "Entrada": vendas += r["valor"]
+            elif r["tipo"] == "Saída" and "Estoque" in r["categoria"]: fornecedores += r["valor"]
+            elif r["tipo"] == "Saída": operacionais += r["valor"]
             
         lucro_bruto = vendas - fornecedores
         lucro_liquido = vendas - fornecedores - operacionais
@@ -591,9 +816,16 @@ class NfeSystem(ctk.CTk):
         
         if filepath:
             try:
-                df = pd.DataFrame(self.dados_relatorio, columns=['ID', 'Data (DB)', 'Valor', 'Cliente/Fornecedor', 'Categoria', 'Tipo', 'Descrição', 'XML'])
-                df['Data'] = df['Data (DB)'].apply(data_para_ui)
-                df = df[['Data', 'Tipo', 'Categoria', 'Descrição', 'Cliente/Fornecedor', 'Valor']] 
+                df = pd.DataFrame(self.dados_relatorio)
+                df = df.rename(columns={
+                    "data": "Data",
+                    "tipo": "Tipo",
+                    "categoria": "Categoria",
+                    "descricao": "Descrição",
+                    "estabelecimento": "Cliente/Fornecedor",
+                    "valor": "Valor",
+                })
+                df = df[['Data', 'Tipo', 'Categoria', 'Descrição', 'Cliente/Fornecedor', 'Valor']]
                 df.to_excel(filepath, index=False)
                 self.show_toast("Arquivo Excel gerado com sucesso!", "sucesso")
             except Exception as e:
